@@ -1,0 +1,20 @@
+{
+  "case": "TC7",
+  "description": "Quyết định dựa vào cử chỉ và cuộc họp trước (giới hạn đã biết)",
+  "known_limitation": true,
+  "expect_no_confirmed": true,
+  "items": [
+    {
+      "type": "action",
+      "content": "Lan khảo sát lịch mọi người cho buổi chia sẻ bảo mật",
+      "owner": "Lan",
+      "deadline": null,
+      "condition": null,
+      "evidence": ["u011"],
+      "optional": true
+    }
+  ],
+  "forbidden": [
+    {"type": "decision", "statuses": ["confirmed", "conditional"], "evidence_only": ["u005", "u006"], "note": "không được bịa 'phương án đó'"}
+  ]
+}

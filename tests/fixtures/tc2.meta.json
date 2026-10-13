@@ -1,0 +1,1 @@
+{"title": "Họp phân công sprint", "agenda": ["Phân công sprint tới"], "participants": [{"name": "Hùng", "role": "PM", "can_decide": true}, {"name": "Nam", "role": "Kỹ thuật", "can_decide": false}, {"name": "Lan", "role": "Tài chính", "can_decide": false}, {"name": "Minh", "role": "Thiết kế", "can_decide": false}]}

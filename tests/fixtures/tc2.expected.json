@@ -1,0 +1,25 @@
+{
+  "case": "TC2",
+  "description": "Việc cần làm có và không có hạn chót",
+  "expect_no_confirmed": false,
+  "items": [
+    {
+      "type": "action",
+      "content": "Minh làm tài liệu API và gửi anh Hùng",
+      "owner": "Minh",
+      "deadline": "thứ Sáu",
+      "condition": null,
+      "evidence": ["u005", "u006"]
+    },
+    {
+      "type": "action",
+      "content": "Xem lại phần test tải",
+      "owner": null,
+      "deadline": null,
+      "condition": null,
+      "evidence": ["u009", "u011"],
+      "required_flags": ["missing_owner"]
+    }
+  ],
+  "forbidden": []
+}

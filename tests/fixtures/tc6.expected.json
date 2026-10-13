@@ -1,0 +1,19 @@
+{
+  "case": "TC6",
+  "description": "Sai số tiền do lỗi ASR (giới hạn đã biết: chỉ kiểm tra cờ)",
+  "known_limitation": true,
+  "expect_no_confirmed": false,
+  "items": [
+    {
+      "type": "decision",
+      "status": "confirmed",
+      "content": "Ngân sách giai đoạn 1 là 30 triệu",
+      "owner": null,
+      "deadline": null,
+      "condition": null,
+      "evidence": ["u008"],
+      "required_flags": ["number_check"]
+    }
+  ],
+  "forbidden": []
+}

@@ -1,0 +1,38 @@
+{
+  "case": "TC4",
+  "description": "Chốt mơ hồ, câu đùa, có điều kiện, hoãn",
+  "expect_no_confirmed": true,
+  "items": [
+    {
+      "type": "decision",
+      "status": "conditional",
+      "content": "Ký hợp đồng gói B với khách hàng ABC",
+      "owner": null,
+      "deadline": null,
+      "condition": "Khách đồng ý giá mới",
+      "evidence": ["u012"]
+    },
+    {
+      "type": "decision",
+      "status": "deferred",
+      "content": "Ngân sách marketing quý tới: chờ hỏi sếp",
+      "owner": null,
+      "deadline": null,
+      "condition": null,
+      "evidence": ["u015"]
+    },
+    {
+      "type": "decision",
+      "status": "open",
+      "content": "Có dời lịch demo nội bộ không",
+      "owner": null,
+      "deadline": null,
+      "condition": null,
+      "evidence": ["u018", "u019"],
+      "optional": true
+    }
+  ],
+  "forbidden": [
+    {"type": "decision", "statuses": ["confirmed", "conditional", "deferred"], "evidence_only": ["u005", "u006", "u007"], "note": "câu đùa bỏ chat không phải quyết định"}
+  ]
+}

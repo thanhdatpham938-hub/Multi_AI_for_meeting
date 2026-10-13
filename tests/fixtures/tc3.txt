@@ -1,0 +1,22 @@
+[07:00] Hùng (PM): Bắt đầu họp nhé, hôm nay có lịch ra mắt beta và tuyển dụng.
+[07:30] Minh: Dạ.
+[08:00] Lan: Ra mắt bản beta ngày 1/11 được không?
+[08:30] Nam: Chắc được, để em xem.
+[10:00] Hùng (PM): Giờ sang chuyện tuyển dụng, mình đang thiếu một bạn backend.
+[11:20] Lan: Bên nhân sự đã đăng tin tuyển dụng tuần trước rồi anh.
+[13:00] Minh: Hiện có bao nhiêu hồ sơ rồi chị?
+[13:30] Lan: Khoảng tám hồ sơ, có ba bạn khá ổn.
+[16:00] Nam: Em có thể hỗ trợ phỏng vấn vòng kỹ thuật nếu cần.
+[17:10] Minh: Bài test kỹ thuật dùng lại đề năm ngoái được không?
+[18:00] Nam: Đề năm ngoái hơi dễ, nên cập nhật thêm.
+[20:30] Lan: Lương đề xuất cho vị trí này em chưa có khung.
+[22:00] Hùng (PM): Chuyện tuyển dụng tuần sau bàn tiếp khi có khung lương.
+[25:00] Minh: Nhân tiện, server staging hôm qua bị chậm, em đã khởi động lại.
+[26:10] Nam: Chắc do log đầy ổ đĩa, giờ ổn rồi.
+[30:00] Lan: Logo mới cho bản beta bên thiết kế gửi chưa?
+[30:40] Minh: Gửi rồi chị, đang ở trong thư mục chung.
+[35:00] Hùng (PM): Còn gì nữa không mọi người?
+[39:15] Nam: Quay lại vụ lúc nãy, cái đó không kịp đâu, phải lùi sang 15/11.
+[39:40] Hùng (PM): Thống nhất 15/11.
+[40:00] Lan: Vâng, em sẽ báo bên marketing.
+[40:30] Hùng (PM): Ok, kết thúc họp.

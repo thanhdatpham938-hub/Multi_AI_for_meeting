@@ -1,0 +1,16 @@
+[14:00] Hùng (PM): Mình bắt đầu nhé, hôm nay có ba phần.
+[14:20] Lan: Dạ.
+[14:40] Minh: Em cập nhật nhanh: bản thiết kế trang chủ đã xong.
+[14:50] Nam: Bên em đã ghép xong API đăng nhập.
+[15:00] Hùng (PM): Như tuần trước đã bàn, mọi người đồng ý phương án đó chứ?
+(mọi người gật đầu, không ai nói gì)
+[15:10] Hùng (PM): Rồi, chuyển sang phần tiếp.
+[15:30] Hùng (PM): Phần tiếp là kế hoạch đào tạo nội bộ.
+[16:00] Lan: Em định tổ chức buổi chia sẻ về bảo mật.
+[16:40] Nam: Nên mời thêm bạn bên vận hành tham gia.
+[17:20] Minh: Thời gian thì chiều thứ Năm có vẻ hợp lý.
+[18:00] Lan: Để em khảo sát lịch mọi người trước đã.
+[19:00] Hùng (PM): Ok, phần cuối là chuyện văn phòng.
+[19:30] Nam: Máy lạnh phòng họp nhỏ lại hỏng rồi.
+[20:00] Lan: Em đã báo bên toà nhà sáng nay.
+[20:30] Hùng (PM): Ok cảm ơn mọi người.

@@ -1,0 +1,21 @@
+[00:30] Hùng (PM): Chào mọi người, mình bắt đầu họp dự án X nhé.
+[00:45] Lan: Chào anh, mọi người đủ rồi ạ.
+[01:10] Hùng (PM): Hôm nay mình bàn chính chuyện hạ tầng server, sau đó cập nhật nhanh tiến độ thiết kế.
+[02:00] Minh: Bên thiết kế tuần này đã xong wireframe màn hình đăng nhập rồi ạ.
+[02:30] Hùng (PM): Tốt, cảm ơn Minh.
+[05:12] Nam: Em đề xuất mình dùng server on-premise cho dự án này.
+[05:40] Nam: Mình tự quản lý được dữ liệu, không phụ thuộc bên ngoài.
+[06:15] Minh: Nghe cũng hợp lý, nhưng ai sẽ vận hành máy chủ?
+[06:50] Nam: Đội em có thể kiêm nhiệm phần vận hành.
+[12:30] Hùng (PM): Lan có số liệu chi phí cho phương án này chưa?
+[13:05] Lan: Có rồi anh, để em trình bày sau phần này.
+[15:20] Minh: Trong lúc chờ thì em nói thêm, giao diện admin đang dùng bộ màu mới.
+[15:45] Hùng (PM): Ok, cảm ơn em.
+[18:40] Lan: On-premise thì chi phí ban đầu vượt ngân sách quý, không ổn.
+[19:02] Lan: Hay mình chuyển qua AWS, trả theo tháng.
+[19:30] Nam: AWS thì đội em cũng đã quen dùng rồi.
+[25:10] Minh: Nếu dùng AWS thì mình có cần thêm người làm DevOps không?
+[25:40] Nam: Chưa cần đâu, giai đoạn đầu đội em lo được.
+[41:05] Hùng (PM): OK, vậy mình chốt dùng AWS nhé.
+[41:20] Lan: Dạ.
+[42:00] Hùng (PM): Cảm ơn mọi người, hôm nay đến đây thôi.

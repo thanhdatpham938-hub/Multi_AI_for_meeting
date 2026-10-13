@@ -1,0 +1,17 @@
+[20:00] Hùng (PM): Mình chuyển sang phần phân công cho sprint tới nhé.
+[20:30] Minh: Dạ anh.
+[21:00] Hùng (PM): Phần API tuần trước đã ổn định chưa em?
+[21:30] Minh: Đã ổn định rồi anh, còn thiếu tài liệu thôi.
+[22:10] Hùng (PM): Minh làm tài liệu API, thứ Sáu này gửi anh nhé.
+[22:18] Minh: Dạ vâng.
+[22:50] Lan: Tài liệu cũ em thấy khá đầy đủ rồi.
+[23:10] Nam: Đúng rồi, chủ yếu bổ sung endpoint mới.
+[23:40] Hùng (PM): Còn phần test tải thì ai đó cần xem lại.
+[24:05] Nam: Lần trước test tải chạy khoảng 500 người dùng đồng thời là ổn.
+[24:30] Lan: Bản mới thêm nhiều tính năng nên chắc phải chạy lại.
+[25:00] Hùng (PM): Ừ, mình ghi nhận vậy.
+[26:00] Minh: Anh ơi, thứ Năm em xin nghỉ buổi chiều được không ạ?
+[26:15] Hùng (PM): Được em, không sao.
+[27:00] Lan: Quán cà phê dưới toà nhà mới đổi chủ, đồ uống ngon hơn hẳn.
+[27:20] Nam: Haha, chiều nay mình xuống thử.
+[28:00] Hùng (PM): Ok, hết phần phân công, cảm ơn mọi người.

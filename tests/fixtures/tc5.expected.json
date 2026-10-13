@@ -1,0 +1,28 @@
+{
+  "case": "TC5",
+  "description": "Không có tên và vai trò người nói",
+  "expect_no_confirmed": false,
+  "items": [
+    {
+      "type": "decision",
+      "status": "confirmed",
+      "accept_statuses": ["confirmed", "deferred", "open"],
+      "content": "Dùng React cho front-end",
+      "owner": null,
+      "deadline": null,
+      "condition": null,
+      "evidence": ["u007"],
+      "required_flags": ["authority_unclear"],
+      "max_confidence": 0.6
+    },
+    {
+      "type": "action",
+      "content": "Dựng khung dự án front-end",
+      "owner": "Speaker 2",
+      "deadline": null,
+      "condition": null,
+      "evidence": ["u008"]
+    }
+  ],
+  "forbidden": []
+}

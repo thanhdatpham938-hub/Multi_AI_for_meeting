@@ -1,0 +1,1 @@
+{"title": "Họp giao ban", "agenda": ["Cập nhật tiến độ", "Đào tạo nội bộ", "Văn phòng"], "participants": [{"name": "Hùng", "role": "PM", "can_decide": true}, {"name": "Nam", "role": "Kỹ thuật", "can_decide": false}, {"name": "Lan", "role": "Tài chính", "can_decide": false}, {"name": "Minh", "role": "Thiết kế", "can_decide": false}]}

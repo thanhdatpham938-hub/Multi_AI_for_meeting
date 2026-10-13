@@ -1,0 +1,15 @@
+[25:00] Hùng (PM): Mình sang phần ngân sách giai đoạn 1.
+[25:30] Lan: Em đã tổng hợp chi phí nhân sự và hạ tầng.
+[26:10] Lan: Nhân sự chiếm phần lớn, hạ tầng khoảng một phần năm.
+[27:00] Nam: Bên kỹ thuật cần thêm license cho công cụ test.
+[27:40] Minh: License đó mua theo năm hay theo tháng?
+[28:00] Nam: Theo năm thì rẻ hơn.
+[29:00] Lan: Em đã cộng phần license vào tổng rồi.
+[30:00] Hùng (PM): Chốt ngân sách giai đoạn 1 là 30 triệu.
+[30:20] Lan: Dạ, em ghi nhận.
+[31:00] Minh: Giao diện bản mới em đã đưa lên môi trường thử nghiệm.
+[31:30] Nam: Em xem qua rồi, chạy mượt.
+[32:00] Lan: Màu nút chính hơi nhạt so với bản cũ.
+[32:30] Minh: Đó là bộ màu mới theo nhận diện thương hiệu chị ạ.
+[33:00] Hùng (PM): Ok, cảm ơn em đã giải thích.
+[33:30] Hùng (PM): Hết nội dung, cảm ơn mọi người.

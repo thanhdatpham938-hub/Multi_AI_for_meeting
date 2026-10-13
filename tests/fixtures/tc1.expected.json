@@ -1,0 +1,21 @@
+{
+  "case": "TC1",
+  "description": "A đổi sang B, chủ trì chốt rõ",
+  "expect_no_confirmed": false,
+  "items": [
+    {
+      "type": "decision",
+      "status": "confirmed",
+      "content": "Dùng AWS làm hạ tầng server cho dự án",
+      "owner": null,
+      "deadline": null,
+      "condition": null,
+      "evidence": ["u019"],
+      "min_confidence": 0.8,
+      "history_superseded": [{"content": "Dùng server on-premise", "evidence": ["u006", "u014"]}]
+    }
+  ],
+  "forbidden": [
+    {"type": "decision", "statuses": ["confirmed", "conditional"], "evidence_only": ["u006", "u007", "u014"], "note": "on-premise không được là quyết định"}
+  ]
+}

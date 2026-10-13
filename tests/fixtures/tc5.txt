@@ -1,0 +1,15 @@
+[09:00] Speaker 1: Mọi người vào đủ chưa nhỉ?
+[09:10] Speaker 2: Đủ rồi anh.
+[09:20] Speaker 3: Em vừa vào ạ.
+[09:40] Speaker 1: Hôm nay mình chọn công nghệ cho front-end dự án mới.
+[09:50] Speaker 3: Em thấy Vue nhẹ hơn, dễ học.
+[09:55] Speaker 2: Nhưng đội mình quen React hơn.
+[10:00] Speaker 1: Tuần sau chốt dùng React cho front-end nhé.
+[10:20] Speaker 2: Ok, em sẽ dựng khung dự án.
+[10:40] Speaker 3: Vâng, em cũng đồng ý.
+[11:00] Speaker 2: Hôm nay trời mưa to quá, đi làm muộn mất.
+[11:15] Speaker 3: Đường Láng ngập hết rồi.
+[11:30] Speaker 2: Mọi người nhớ mang áo mưa nhé, haha.
+[11:40] Speaker 3: Chiều nay chắc còn mưa nữa.
+[12:00] Speaker 1: Ừ, thôi họp nhanh vậy thôi.
+[12:10] Speaker 1: Cảm ơn mọi người.

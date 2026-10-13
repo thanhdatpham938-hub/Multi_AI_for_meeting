@@ -1,0 +1,20 @@
+[10:00] Hùng (PM): Chào cả nhà, hôm nay bàn tính năng sản phẩm, hợp đồng khách hàng và ngân sách.
+[10:30] Lan: Dạ, em có cập nhật về ngân sách.
+[11:00] Nam: Tính năng chat đang chậm tiến độ khoảng hai tuần.
+[11:30] Minh: Phần giao diện chat cũng chưa xong.
+[12:00] Nam: Hay bỏ luôn tính năng chat cho nhanh, haha.
+[12:05] Lan: Ừ.
+[12:30] Minh: Khách chắc không chịu đâu anh.
+[20:00] Hùng (PM): Sang hợp đồng với khách hàng ABC.
+[21:10] Lan: Khách đang cân nhắc giữa gói A và gói B.
+[23:00] Nam: Gói B có thêm phần bảo trì một năm.
+[24:20] Lan: Mình vừa gửi bảng giá mới cho khách hôm qua.
+[25:30] Hùng (PM): Nếu khách đồng ý giá mới thì mình ký hợp đồng gói B.
+[30:00] Hùng (PM): Còn ngân sách marketing quý tới thì sao?
+[31:30] Minh: Bên em đề xuất tăng thêm cho quảng cáo mạng xã hội.
+[33:10] Lan: Ngân sách marketing để anh hỏi sếp đã rồi báo lại.
+[40:00] Nam: Thứ Hai tuần sau em nghỉ phép một ngày nhé mọi người.
+[41:00] Minh: Ok, chúc em nghỉ vui.
+[44:30] Lan: Vậy lịch demo nội bộ có dời không?
+[45:00] Minh: Ừ thế đi.
+[45:30] Hùng (PM): Ok, mình dừng ở đây nhé.

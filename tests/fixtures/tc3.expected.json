@@ -1,0 +1,41 @@
+{
+  "case": "TC3",
+  "description": "Chủ đề quay lại sau 30 phút, dùng 'cái đó'",
+  "expect_no_confirmed": false,
+  "same_topic": [["u003", "u019", "u020"]],
+  "items": [
+    {
+      "type": "decision",
+      "status": "confirmed",
+      "content": "Ra mắt bản beta ngày 15/11",
+      "owner": null,
+      "deadline": null,
+      "condition": null,
+      "evidence": ["u019", "u020"],
+      "history_superseded": [{"content": "Ra mắt beta ngày 1/11", "evidence": ["u003", "u004"]}]
+    },
+    {
+      "type": "decision",
+      "status": "deferred",
+      "accept_statuses": ["deferred", "open"],
+      "content": "Tuyển dụng backend: tuần sau bàn tiếp khi có khung lương",
+      "owner": null,
+      "deadline": null,
+      "condition": null,
+      "evidence": ["u013"],
+      "optional": true
+    },
+    {
+      "type": "action",
+      "content": "Lan báo bên marketing về lịch ra mắt beta",
+      "owner": "Lan",
+      "deadline": null,
+      "condition": null,
+      "evidence": ["u021"],
+      "optional": true
+    }
+  ],
+  "forbidden": [
+    {"type": "decision", "statuses": ["confirmed"], "evidence_only": ["u003", "u004"], "note": "1/11 không được là quyết định"}
+  ]
+}
