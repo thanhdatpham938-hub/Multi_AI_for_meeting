@@ -744,7 +744,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "anthropic", specifier = ">=0.60" },
+    { name = "anthropic", specifier = ">=1.13" },
     { name = "openpyxl", specifier = ">=3.1" },
     { name = "pandas", specifier = ">=2.0" },
     { name = "pydantic", specifier = ">=2.6" },
