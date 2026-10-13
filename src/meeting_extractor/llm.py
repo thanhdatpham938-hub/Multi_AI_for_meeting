@@ -34,7 +34,7 @@ PRICING: dict[str, tuple[float, float]] = {
 }
 
 # Models that reject non-default sampling params (temperature) with HTTP 400.
-_NO_SAMPLING_RE = re.compile(r"claude-(fable|mythos)|-5(-\d+)?$|opus-4-[78]")
+_NO_SAMPLING_RE = re.compile(r"claude-(fable|mythos)|claude-(opus|sonnet|haiku)-5(-\d+)?$|opus-4-[78]")
 # Models that accept the server-side refusal fallback `fallbacks: "default"`.
 _FALLBACK_MODELS = ("claude-sonnet-5-5", "claude-opus-5-5", "claude-opus-5", "claude-fable-5-1")
 
