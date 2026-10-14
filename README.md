@@ -2,14 +2,101 @@
 
 # MeetSync – AI trích xuất quyết định cuộc họp (MVP)
 
-Hệ thống nhận **transcript cuộc họp tiếng Việt** (`.txt`, `.vtt`) và trả về danh sách có cấu trúc:
-quyết định cuối cùng, việc cần làm, vướng mắc, yêu cầu, vấn đề chưa chốt và tri thức mới.
-Mỗi mục có **trích dẫn câu gốc** (ID câu), **trạng thái** và **lịch sử thay đổi**.
+## Giới thiệu sản phẩm
 
-Nguyên tắc cốt lõi: **không biến ý kiến trung gian thành quyết định chính thức.** Đầu buổi đề xuất A,
-cuối buổi chốt B → B là `confirmed`, A chỉ nằm trong lịch sử với trạng thái `superseded`.
+**MeetSync** biến transcript một cuộc họp tiếng Việt thành biên bản có cấu trúc trong vài phút:
+quyết định cuối cùng, việc cần làm (ai làm, hạn khi nào), vướng mắc, yêu cầu, vấn đề còn bỏ ngỏ và
+thông tin mới. Con người duyệt lại rồi xuất ra Excel hoặc JSON.
 
-Đặc tả đầy đủ: [CLAUDE.md](CLAUDE.md).
+**Dành cho ai:** người theo dõi sau họp – PM, trưởng nhóm, thư ký – những người hiện đang phải nghe
+lại hoặc đọc lại cả buổi họp để viết biên bản.
+
+**Vấn đề MeetSync giải quyết:** trong một cuộc họp, một vấn đề thường được bàn đi bàn lại nhiều lần
+trước khi chốt. Công cụ tóm tắt thông thường dễ ghi nhầm một ý kiến giữa chừng thành quyết định.
+MeetSync được thiết kế quanh một nguyên tắc: **không biến ý kiến trung gian thành quyết định chính thức.**
+
+> Đầu buổi Nam đề xuất server on-premise. Lan nói on-premise vượt ngân sách, gợi ý AWS. Cuối buổi
+> PM chốt AWS.
+> → MeetSync ghi **"Dùng AWS" – Đã chốt**, kèm lịch sử: on-premise *Đề xuất* → *Bị thay thế*
+> (lý do: vượt ngân sách quý).
+
+### Tính năng chính
+
+| Tính năng | Mô tả |
+| --- | --- |
+| Trích dẫn câu gốc | Mỗi mục trỏ về đúng câu nói (thời gian, người nói) để kiểm chứng, không phụ thuộc AI chép lại |
+| Theo dõi trạng thái quyết định | `Đề xuất`, `Bị thay thế`, `Đã chốt`, `Có điều kiện`, `Hoãn`, `Chưa chốt` – kèm lịch sử thay đổi theo thời gian |
+| Nhận biết câu không phải chốt | Câu đùa, "hay là…", "ừ" đứng một mình, câu thuật lại "hôm trước sếp bảo…" không được tính là chốt |
+| Gộp chủ đề quay lại | "Quay lại vụ lúc nãy…" sau 30 phút vẫn được nối về đúng chủ đề |
+| Kiểm tra thẩm quyền | Người không có quyền chốt mà nói "chốt" sẽ bị gắn cờ "Chưa rõ thẩm quyền" |
+| Không bịa thông tin | Người phụ trách, hạn chót chỉ được điền khi có trong câu nói; thiếu thì để trống và gắn cờ |
+| Gắn cờ cần xem lại | Con số/ngày tháng, thiếu người phụ trách, độ tin cậy thấp… được đưa lên đầu danh sách duyệt |
+| Duyệt và xuất | Chấp nhận / Sửa / Loại từng mục, gán tên cho "Speaker N", xuất Excel (mỗi loại một sheet) và JSON |
+
+**Cách hoạt động:** 4 agent AI chạy nối tiếp – Chia chủ đề → Trích xuất → Theo dõi quyết định →
+Kiểm chứng – sau đó 8 quy tắc bằng code hậu kiểm kết quả (chi tiết ở mục [Kiến trúc](#kiến-trúc)).
+Mặc định dùng OpenAI (`gpt-4.1-mini` / `gpt-4.1`), có thể chuyển sang Claude.
+
+**Ngoài phạm vi MVP:** ghi âm/nhận dạng giọng nói, chatbot hỏi đáp, liên kết nhiều cuộc họp,
+đăng nhập/phân quyền. Xem thêm [Giới hạn đã biết](#giới-hạn-đã-biết).
+
+## Chạy thử nhanh (≈ 5 phút)
+
+Cần Python 3.11+ và một OpenAI API key.
+
+**1. Tải mã nguồn và cài thư viện**
+
+```bash
+git clone https://github.com/thanhdatpham938-hub/Multi_AI_for_meeting.git
+cd Multi_AI_for_meeting
+uv sync                          # hoặc: pip install -r requirements.txt && pip install -e .
+```
+
+**2. Điền API key**
+
+```bash
+copy .env.example .env           # macOS/Linux: cp .env.example .env
+```
+
+Mở `.env`, điền `OPENAI_API_KEY=sk-...` (các dòng khác giữ nguyên).
+
+**3. Mở giao diện**
+
+```bash
+uv run streamlit run app/review_app.py
+```
+
+Trình duyệt mở http://localhost:8501.
+
+**4. Phân tích một cuộc họp mẫu**
+
+1. Ở khung **Transcript**, tải file `tests/fixtures/tc1.txt`.
+2. Ở khung **Thông tin cuộc họp** bên phải, bấm *Nạp từ meeting_meta.json* và chọn `tests/fixtures/tc1.meta.json`
+   (tiêu đề, ngày giờ, người tham dự tự điền).
+3. Bấm **Phân tích** và chờ khoảng 15–30 giây (cuộc họp 100+ câu mất vài phút).
+
+**Kết quả mong đợi:** mục **"Dùng AWS…" – Đã chốt**, trích dẫn câu `[41:05] Hùng (PM): OK, vậy mình chốt
+dùng AWS nhé.` Bấm **›** để xem lịch sử: on-premise *Bị thay thế* vì vượt ngân sách. On-premise
+**không** xuất hiện như một quyết định đã chốt.
+
+**5. Duyệt và xuất:** bấm **›** ở từng mục → *Chấp nhận / Sửa / Loại*, hoặc **Duyệt nhanh** cho các mục
+không có cờ; sau đó bấm **⬇ Excel**.
+
+**Thử thêm các cuộc họp khác:**
+
+| File | Thử điều gì |
+| --- | --- |
+| `tests/fixtures/tc4.txt` | Câu đùa, "ừ", quyết định có điều kiện, hoãn – không mục nào được "Đã chốt" |
+| `tests/fixtures/tc5.txt` | Chỉ có "Speaker 1, 2" – thử ô **Gán tên người nói** ở khung bên phải |
+| `test_cases_3_muc_do (1)/case1…/transcript.txt` + `meeting_meta.json` | Cuộc họp dài 102 câu, dễ |
+| `test_cases_3_muc_do (1)/case2…` | 140 câu, nhiều bẫy: đổi ý nhiều lần, người không có quyền tự "chốt" |
+| `test_cases_3_muc_do (1)/case5…` | 113 câu, CEO vào muộn lật lại quyết định |
+
+Mỗi case dài có file `expected_result.md` mô tả kết quả đúng để so sánh.
+
+**Không có API key?** Vẫn kiểm tra được toàn bộ hệ thống với dữ liệu giả lập: `uv run pytest`.
+
+Đặc tả kỹ thuật đầy đủ: [CLAUDE.md](CLAUDE.md).
 
 ## Kiến trúc
 
@@ -29,7 +116,7 @@ Bộ điều phối là hàm Python gọi tuần tự (`pipeline.py`), không d�
 yêu cầu JSON, được kiểm tra bằng Pydantic và thử lại tối đa 2 lần kèm thông báo lỗi. Prompt nằm
 trong `src/meeting_extractor/prompts/*.md`; hash của từng prompt được lưu trong mỗi kết quả.
 
-## Cài đặt (≈ 5 phút)
+## Cài đặt chi tiết
 
 Yêu cầu Python 3.11+.
 
@@ -138,7 +225,7 @@ Mở http://localhost:8501, rồi:
 ## Kiểm thử
 
 ```bash
-uv run pytest            # 77 test, không gọi API, không cần API key
+uv run pytest            # 83 test, không gọi API, không cần API key
 ```
 
 Test offline dùng `FakeLLM` (trả JSON kịch bản) cho parser, LLM client (retry/validate), từng agent,
@@ -169,8 +256,8 @@ Chỉ số tổng hợp tính trên TC1–TC5; TC6 và TC7 chấm theo tiêu ch�
 
 ### Kết quả eval mới nhất
 
-**Chưa có.** Eval cần gọi API thật, và môi trường xây dựng MVP chưa có API key, nên bước
-tinh chỉnh prompt theo eval (bước 7) chưa thực hiện. Những gì đã kiểm chứng offline:
+**Chưa có.** Bộ eval tự động chưa được chạy với API thật, nên bước tinh chỉnh prompt theo eval
+(bước 7) chưa thực hiện. Những gì đã kiểm chứng offline:
 
 - Đáp án của cả 7 ca nhất quán với quy tắc hậu kiểm: một kết quả "hoàn hảo" dựng từ đáp án đi qua
   `rules.py` đạt toàn bộ ngưỡng (`tests/test_metrics.py`).
@@ -192,6 +279,20 @@ chạy lại **toàn bộ** bộ eval sau mỗi lần sửa, rồi dán `eval/re
 | TC7 | Cử chỉ + cuộc họp trước | Không có `confirmed` bịa cho "phương án đó" |
 
 Mỗi ca gồm `tcN.txt`, `tcN.expected.json` và (trừ TC5) `tcN.meta.json`.
+
+### Bộ cuộc họp dài (`test_cases_3_muc_do (1)/`)
+
+Năm cuộc họp 100–140 câu, thời gian liên tục, mỗi bộ gồm `transcript.txt`, `meeting_meta.json` và
+`expected_result.md` (đáp án và tiêu chí đạt dạng văn bản để người đọc đối chiếu; bộ eval tự động
+chưa chấm được các case này).
+
+| Case | Mức độ | Nội dung |
+| --- | --- | --- |
+| case1 | Dễ | Sprint planning, đổi MoMo → VNPay, việc có người và hạn rõ (102 câu) |
+| case2 | Khó | Ra mắt trà sữa: đổi kênh quảng cáo nhiều lần, chủ đề quay lại sau 20 phút, người không có quyền tự "chốt" (140 câu) |
+| case3 | Rất khó | Transcript ASR thô, chỉ có "Speaker N", số sai, nội dung nằm ngoài cuộc họp – thất bại có chủ đích (110 câu) |
+| case4 | Trung bình | Khai trương chi nhánh cà phê: quyết định có điều kiện, hoãn, quay lại chủ đề, việc bị giao lại (107 câu) |
+| case5 | Khó | Hậu kiểm sự cố + Black Friday: ba người có quyền chốt, CEO vào muộn lật quyết định (113 câu) |
 
 ## Giới hạn đã biết
 
@@ -240,5 +341,6 @@ src/meeting_extractor/
 app/review_app.py        giao diện Streamlit (.streamlit/config.toml: theme)
 eval/run_eval.py         chạy bộ đánh giá      eval/metrics.py   khớp đáp án, tính chỉ số
 tests/                   pytest + fixtures/ (7 transcript, đáp án, meta, 1 file .vtt mẫu)
+test_cases_3_muc_do (1)/ 5 cuộc họp dài 100+ câu kèm đáp án dạng văn bản
 runs/                    kết quả mỗi lần chạy (gitignore)
 ```
