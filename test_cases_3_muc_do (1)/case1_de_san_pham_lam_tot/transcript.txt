@@ -1,0 +1,102 @@
+[00:05] Trang (PO): Chào cả nhà, mọi người vào đủ chưa nhỉ?
+[00:14] Đức (Tech Lead): Còn thiếu Long thôi chị, chắc đang vào.
+[00:22] Long: Em vào rồi đây ạ, xin lỗi mọi người, mạng hơi chậm.
+[00:34] Trang (PO): Ok không sao. Hôm nay mình sprint planning cho Sprint 7, có bốn việc: phạm vi sprint, cổng thanh toán, ngày phát hành và phân công.
+[00:52] Trang (PO): Trước khi vào, Đức điểm lại nhanh kết quả Sprint 6 giúp chị.
+[01:08] Đức (Tech Lead): Sprint 6 team hoàn thành 34 trên 38 story point, còn 4 điểm là phần thông báo đẩy bị trễ do chờ chứng chỉ của Apple.
+[01:30] Trang (PO): Phần thông báo đẩy giờ xong chưa em?
+[01:44] Đức (Tech Lead): Chứng chỉ có rồi chị, Hải làm nốt trong hôm qua, sáng nay đã lên môi trường test.
+[02:02] Hải: Dạ em đẩy lên lúc 8 giờ sáng, Long test giúp em nhé.
+[02:13] Long: Ok anh, em test luôn trong sáng nay.
+[02:21] Trang (PO): Còn bug nào tồn từ Sprint 6 không?
+[02:34] Long: Còn hai bug. Một là lỗi hiển thị giờ sai khi đổi múi giờ, mức thấp. Hai là lỗi đặt trùng lịch khi hai người bấm cùng lúc, mức cao.
+[02:51] Hải: Lỗi đặt trùng lịch em sửa rồi, thêm khóa ở tầng database, nhưng chưa ai test lại.
+[03:09] Long: Vậy em test lại lỗi đặt trùng lịch trong hôm nay luôn.
+[03:24] Trang (PO): Còn lỗi múi giờ thì sao?
+[03:29] Vy: Lỗi đó ở phía frontend, em ước tính nửa ngày, có thể đưa vào Sprint 7.
+[03:46] Trang (PO): Khách hàng toàn ở Việt Nam, lỗi múi giờ chưa ảnh hưởng ai, để trong backlog đã.
+[04:01] Vy: Dạ vâng.
+[04:07] Trang (PO): Ok, giờ vào phạm vi Sprint 7. Backlog đang có ba tính năng ưu tiên: đặt lịch lặp lại, thanh toán online và tích điểm thành viên.
+[04:25] Trang (PO): Chị nói qua từng cái. Đặt lịch lặp lại là khách đặt một lần, ví dụ gội đầu mỗi thứ Bảy, hệ thống tự giữ chỗ các tuần sau.
+[04:46] Vy: Cái này cần thêm màn hình chọn chu kỳ, mỗi tuần, hai tuần hay mỗi tháng đúng không chị?
+[04:58] Trang (PO): Đúng rồi, ba lựa chọn đó là đủ.
+[05:04] Hải: Backend thì phải thêm job chạy hằng đêm để sinh lịch cho các tuần tiếp theo.
+[05:15] Đức (Tech Lead): Job đó anh muốn giới hạn sinh lịch tám tuần tới thôi, tránh sinh quá nhiều bản ghi.
+[05:27] Hải: Dạ hợp lý anh.
+[05:37] Trang (PO): Thứ hai là thanh toán online, khách trả tiền trước khi đến spa, giảm tình trạng đặt rồi không đến.
+[05:53] Trang (PO): Thứ ba là tích điểm, mỗi lần dùng dịch vụ được cộng điểm, đủ điểm thì đổi quà.
+[06:10] Đức (Tech Lead): Với năng lực team hiện tại thì một sprint hai tuần chỉ làm kịp hai tính năng thôi chị.
+[06:22] Hải: Em đồng ý, riêng thanh toán đã mất khoảng tám ngày công phía backend.
+[06:35] Vy: Frontend thì đặt lịch lặp lại khoảng bốn ngày, thanh toán khoảng ba ngày.
+[06:53] Long: Bên QA thì mỗi tính năng cần khoảng hai ngày test.
+[07:08] Trang (PO): Chị đã hỏi khách rồi, họ ưu tiên đặt lịch lặp lại và thanh toán online, tích điểm họ bảo để sau cũng được.
+[07:25] Đức (Tech Lead): Vậy hợp lý, tích điểm dời sang Sprint 8.
+[07:37] Trang (PO): Ok, chốt phạm vi Sprint 7 gồm đặt lịch lặp lại và thanh toán online, tích điểm thành viên dời sang Sprint 8.
+[07:55] Vy: Dạ rõ ạ.
+[08:01] Trang (PO): Tiếp theo là cổng thanh toán. Vy có tìm hiểu rồi đúng không em?
+[08:18] Vy: Dạ em đề xuất dùng MoMo, tích hợp nhanh, tài liệu SDK rõ ràng, nhiều người trẻ dùng.
+[08:34] Vy: Em đã thử bản demo của MoMo, luồng thanh toán trên điện thoại chỉ mất ba bước.
+[08:45] Hải: MoMo thì phía backend làm cũng ổn, có sẵn thư viện.
+[08:59] Long: MoMo có môi trường test riêng không anh?
+[09:07] Hải: Có em, đăng ký là dùng được ngay.
+[09:15] Trang (PO): Nhưng hôm qua khách hàng gửi email nói chuỗi spa của họ đã ký hợp đồng với VNPay, phí thấp hơn và họ muốn đối soát chung một chỗ.
+[09:36] Đức (Tech Lead): Nếu khách đã có hợp đồng VNPay thì mình nên theo VNPay, tránh thêm một bên phải đối soát.
+[09:49] Vy: Vâng, vậy em bỏ phương án MoMo.
+[10:00] Hải: VNPay em từng làm ở dự án trước rồi, thời gian tương đương.
+[10:15] Đức (Tech Lead): VNPay hỗ trợ cả mã QR và thẻ ATM nội địa, hợp với khách lớn tuổi của spa.
+[10:29] Trang (PO): Ok, chốt dùng VNPay làm cổng thanh toán cho Sprint 7.
+[10:41] Hải: Có một vấn đề là mình chưa có tài khoản sandbox của VNPay nên chưa test được.
+[10:56] Trang (PO): Để chị liên hệ khách xin tài khoản sandbox, chậm nhất thứ Năm 16/10 chị gửi Hải.
+[11:14] Hải: Dạ cảm ơn chị.
+[11:24] Long: Em ghi chú thêm, theo tài liệu VNPay thì giao dịch sandbox tự hết hạn sau 15 phút nếu không xác nhận, lúc viết test case em sẽ tính đến.
+[11:42] Vy: Màn hình thanh toán có cần hiển thị đồng hồ đếm ngược không chị?
+[11:59] Trang (PO): Có em, hiện số phút còn lại để khách biết mà thanh toán.
+[12:11] Vy: Dạ, em sẽ thiết kế phần đó.
+[12:23] Đức (Tech Lead): Còn phần hoàn tiền khi khách hủy lịch thì sao chị?
+[12:37] Trang (PO): Sprint này chưa làm hoàn tiền tự động, nếu khách hủy thì lễ tân hoàn tay như hiện tại.
+[12:51] Đức (Tech Lead): Ok, vậy backend chỉ cần lưu trạng thái giao dịch để lễ tân tra cứu.
+[13:06] Hải: Em ghi nhận.
+[13:15] Trang (PO): Giờ đến ngày phát hành. Sprint kết thúc ngày 28/10, mình phát hành luôn ngày đó được không?
+[13:29] Đức (Tech Lead): Được chị, nếu có sandbox từ thứ Năm thì team đủ thời gian.
+[13:45] Long: Bên QA cần ít nhất hai ngày test hồi quy trước khi phát hành, tức code phải xong trước 26/10.
+[13:59] Hải: 26/10 là Chủ nhật đấy anh.
+[14:06] Đức (Tech Lead): Không sao, code freeze tính hết ngày 26/10, thứ Hai 27 QA test hồi quy, 28 phát hành.
+[14:24] Long: Như vậy em có một ngày rưỡi, chấp nhận được nếu các bug lớn đã được test trong sprint.
+[14:41] Trang (PO): Vậy chốt: code freeze 26/10, phát hành ngày 28/10.
+[14:56] Đức (Tech Lead): Phát hành lúc mấy giờ chị? Em đề xuất buổi tối để ít người dùng.
+[15:06] Trang (PO): Ừ, 10 giờ tối là ổn, Đức trực phát hành nhé.
+[15:20] Đức (Tech Lead): Ok chị, em trực.
+[15:24] Trang (PO): Giờ phân công nhé.
+[15:33] Trang (PO): Hải làm API thanh toán VNPay, hạn 22/10.
+[15:46] Hải: Dạ vâng. Em làm luôn cả job sinh lịch lặp lại được không chị?
+[15:57] Đức (Tech Lead): Job đó để anh làm, Hải tập trung thanh toán cho chắc.
+[16:07] Trang (PO): Ok, Đức làm job sinh lịch lặp lại, hạn bao giờ em?
+[16:18] Đức (Tech Lead): Em xong trước 21/10.
+[16:23] Trang (PO): Vy làm màn hình đặt lịch lặp lại và màn hình thanh toán, hạn 24/10.
+[16:36] Vy: Dạ ok chị.
+[16:43] Trang (PO): Long viết test plan và test case cho cả hai tính năng, hạn 23/10.
+[16:59] Long: Vâng chị.
+[17:08] Đức (Tech Lead): Em sẽ review code hằng ngày lúc 4 giờ chiều để không bị dồn cuối sprint.
+[17:24] Long: Em hỏi thêm, test trên thiết bị thật thì mình có đủ máy không chị? Bên em chỉ có một iPhone.
+[17:44] Trang (PO): Công ty mới mua thêm hai máy Android, Long qua phòng hành chính nhận.
+[17:58] Long: Dạ tốt quá.
+[18:02] Vy: Chị ơi, thiết kế màn hình thanh toán bên design gửi chưa ạ?
+[18:17] Trang (PO): Gửi rồi em, chị chuyển vào nhóm chat ngay sau họp.
+[18:27] Vy: Dạ cảm ơn chị.
+[18:34] Hải: Một điểm nữa, khi khách đặt lịch lặp lại thì thanh toán trước cho cả chuỗi hay từng buổi ạ?
+[18:53] Trang (PO): Câu hỏi hay. Mọi người nghĩ sao?
+[18:59] Đức (Tech Lead): Thanh toán cả chuỗi thì giá trị lớn, khách dễ ngại. Từng buổi thì đơn giản hơn.
+[19:17] Vy: Em cũng thấy từng buổi dễ làm giao diện hơn.
+[19:29] Trang (PO): Ok, thanh toán từng buổi, mỗi buổi thanh toán trước 24 giờ.
+[19:41] Hải: Vậy em thêm thông báo nhắc thanh toán trước 24 giờ luôn nhé.
+[19:56] Trang (PO): Được em.
+[20:06] Trang (PO): Còn câu hỏi gì không mọi người?
+[20:17] Long: Không ạ.
+[20:26] Vy: Không chị.
+[20:35] Trang (PO): Chị tóm lại: Sprint 7 làm đặt lịch lặp lại và thanh toán online qua VNPay, thanh toán từng buổi; tích điểm sang Sprint 8; code freeze 26/10, phát hành 28/10 lúc 10 giờ tối.
+[20:57] Trang (PO): Phân công: Hải API thanh toán hạn 22/10, Đức job sinh lịch hạn 21/10, Vy hai màn hình hạn 24/10, Long test plan hạn 23/10, chị gửi sandbox trước thứ Năm.
+[21:22] Đức (Tech Lead): Chuẩn rồi chị.
+[21:33] Hải: Dạ.
+[21:36] Trang (PO): Ok, Sprint 7 bắt đầu từ chiều nay nhé. Cố lên cả nhà.
+[21:47] Long: Cố lên ạ.
+[21:53] Trang (PO): Cảm ơn mọi người, kết thúc họp.

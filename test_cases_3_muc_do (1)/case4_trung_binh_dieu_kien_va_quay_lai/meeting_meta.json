@@ -1,0 +1,22 @@
+{
+  "title": "Họp chuẩn bị khai trương chi nhánh Thủ Đức",
+  "date": "2026-10-20",
+  "start_time": "15:00",
+  "end_time": "15:20",
+  "project": "Chuỗi cà phê Mộc – mở chi nhánh thứ 5",
+  "agenda": [
+    "Tiến độ thi công",
+    "Ngày khai trương",
+    "Khuyến mãi khai trương",
+    "Tuyển dụng",
+    "Thiết bị"
+  ],
+  "participants": [
+    {"name": "Hạnh", "role": "Giám đốc vận hành (COO)", "can_decide": true},
+    {"name": "Tùng", "role": "Quản lý chi nhánh mới", "can_decide": false},
+    {"name": "Bảo", "role": "Phụ trách thi công", "can_decide": false},
+    {"name": "Kiệt", "role": "Kế toán", "can_decide": false},
+    {"name": "Mai", "role": "Marketing", "can_decide": false},
+    {"name": "Nhi", "role": "Nhân sự", "can_decide": false}
+  ]
+}

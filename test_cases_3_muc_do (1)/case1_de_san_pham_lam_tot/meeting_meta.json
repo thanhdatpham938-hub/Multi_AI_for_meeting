@@ -1,0 +1,20 @@
+{
+  "title": "Sprint planning – Sprint 7",
+  "date": "2026-10-15",
+  "start_time": "09:00",
+  "end_time": "09:25",
+  "project": "App đặt lịch spa – BeautyBook",
+  "agenda": [
+    "Phạm vi Sprint 7",
+    "Chọn cổng thanh toán",
+    "Ngày phát hành",
+    "Phân công công việc"
+  ],
+  "participants": [
+    {"name": "Trang", "role": "Product Owner", "can_decide": true},
+    {"name": "Đức", "role": "Tech Lead", "can_decide": true},
+    {"name": "Hải", "role": "Backend Developer", "can_decide": false},
+    {"name": "Vy", "role": "Frontend Developer", "can_decide": false},
+    {"name": "Long", "role": "QA", "can_decide": false}
+  ]
+}

@@ -271,9 +271,14 @@ def _prefill_from_meta(meta: MeetingMeta) -> None:
     form["title"] = meta.title or ""
     form["project"] = meta.project or ""
     form["agenda"] = "\n".join(meta.agenda)
+    if meta.date:
+        for fmt in ("%d/%m/%Y", "%Y-%m-%d"):
+            try:
+                form["date"] = datetime.strptime(meta.date, fmt).date()
+                break
+            except ValueError:
+                continue
     try:
-        if meta.date:
-            form["date"] = datetime.strptime(meta.date, "%d/%m/%Y").date()
         if meta.start_time:
             form["start"] = datetime.strptime(meta.start_time, "%H:%M").time()
         if meta.end_time:

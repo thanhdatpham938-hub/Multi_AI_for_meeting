@@ -1,0 +1,21 @@
+{
+  "title": "Họp kế hoạch chiến dịch ra mắt sản phẩm",
+  "date": "2026-10-16",
+  "start_time": "14:00",
+  "end_time": "14:30",
+  "project": "Ra mắt trà sữa đóng chai – TeaGo",
+  "agenda": [
+    "Kênh quảng cáo chính",
+    "KOL và hoạt động trải nghiệm",
+    "Ngân sách",
+    "Ngày ra mắt"
+  ],
+  "participants": [
+    {"name": "Phương", "role": "Giám đốc Marketing", "can_decide": true},
+    {"name": "Khoa", "role": "Brand Manager", "can_decide": false},
+    {"name": "Ngọc", "role": "Content Lead", "can_decide": false},
+    {"name": "Tuấn", "role": "Performance Ads", "can_decide": false},
+    {"name": "Hà", "role": "Sales Manager", "can_decide": false},
+    {"name": "Bình", "role": "Finance", "can_decide": false}
+  ]
+}

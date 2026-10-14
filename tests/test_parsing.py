@@ -93,3 +93,17 @@ def test_load_meta():
     assert meta is not None
     assert meta.participants[0].can_decide is True
     assert load_meta(None) is None
+
+
+LONG_CASES = Path(__file__).resolve().parents[1] / "test_cases_3_muc_do (1)"
+
+
+@pytest.mark.parametrize("case_dir", sorted(p for p in LONG_CASES.glob("case*") if p.is_dir()), ids=lambda p: p.name)
+def test_long_cases_have_100_lines_and_continuous_time(case_dir: Path):
+    utts, warnings = parse_file(case_dir / "transcript.txt")
+    assert len(utts) >= 100
+    secs = [sum(int(x) * 60 ** i for i, x in enumerate(reversed(u.time.split(":")))) for u in utts]
+    gaps = [b - a for a, b in zip(secs, secs[1:])]
+    assert all(0 < g <= 30 for g in gaps), "thời gian phải tăng dần và không ngắt quãng quá 30 giây"
+    assert load_meta(case_dir / "meeting_meta.json") is not None
+    assert (case_dir / "expected_result.md").exists()

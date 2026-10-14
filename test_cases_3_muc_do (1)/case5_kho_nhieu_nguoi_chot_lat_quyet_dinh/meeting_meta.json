@@ -1,0 +1,22 @@
+{
+  "title": "Hậu kiểm sự cố thanh toán và kế hoạch Black Friday",
+  "date": "2026-10-21",
+  "start_time": "09:30",
+  "end_time": "09:50",
+  "project": "Sàn thương mại điện tử ShopNhanh",
+  "agenda": [
+    "Nguyên nhân sự cố",
+    "Biện pháp khắc phục",
+    "Kế hoạch Black Friday",
+    "Thông báo và bồi thường khách hàng"
+  ],
+  "participants": [
+    {"name": "Hòa", "role": "CEO", "can_decide": true},
+    {"name": "Quân", "role": "CTO", "can_decide": true},
+    {"name": "Linh", "role": "Head of Product", "can_decide": true},
+    {"name": "Phúc", "role": "Backend Lead", "can_decide": false},
+    {"name": "Thảo", "role": "SRE", "can_decide": false},
+    {"name": "Duy", "role": "QA Lead", "can_decide": false},
+    {"name": "My", "role": "Trưởng nhóm CSKH", "can_decide": false}
+  ]
+}

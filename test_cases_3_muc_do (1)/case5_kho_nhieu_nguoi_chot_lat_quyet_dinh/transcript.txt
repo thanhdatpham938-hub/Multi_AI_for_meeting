@@ -1,0 +1,113 @@
+[00:05] Quân (CTO): Mọi người vào đủ chưa? Anh Hòa báo vào muộn khoảng mười lăm phút.
+[00:14] Linh (Head of Product): Bên product đủ rồi anh.
+[00:22] Thảo (SRE): SRE có em.
+[00:30] Phúc (Backend Lead): Backend có em, Duy với My cũng vào rồi.
+[00:38] Quân (CTO): Ok. Hôm nay có bốn việc: nguyên nhân sự cố tối qua, cách khắc phục, kế hoạch Black Friday và thông báo cho khách.
+[00:51] Quân (CTO): Thảo tóm tắt sự cố trước giúp anh.
+[00:58] Thảo (SRE): Dạ, tối qua từ 20:12 đến 20:59, tức 47 phút, cổng thanh toán trả lỗi liên tục.
+[01:11] Thảo (SRE): Tỷ lệ lỗi đỉnh lên 38%, tổng cộng khoảng 3.200 đơn thanh toán thất bại.
+[01:22] My (CSKH): Bên CSKH nhận hơn 900 cuộc gọi và tin nhắn trong tối qua, nhiều khách bị trừ tiền mà đơn không lên.
+[01:37] Linh (Head of Product): Bị trừ tiền mà không có đơn thì nghiêm trọng đấy, bao nhiêu trường hợp em?
+[01:47] My (CSKH): Dạ hiện ghi nhận 214 trường hợp, ngân hàng sẽ hoàn tự động trong 3 đến 5 ngày.
+[01:57] Quân (CTO): Nguyên nhân gốc là gì Phúc?
+[02:06] Phúc (Backend Lead): Dạ bản 3.3 deploy chiều qua tăng số worker xử lý đơn từ 8 lên 24, nhưng pool kết nối database vẫn để 50.
+[02:20] Phúc (Backend Lead): Lúc cao điểm worker giành kết nối, pool cạn, các request thanh toán bị timeout.
+[02:30] Thảo (SRE): Cảnh báo có bắn lúc 20:15 nhưng gửi vào kênh cũ không ai trực, đến 20:40 em mới thấy.
+[02:44] Quân (CTO): Tức là mất 25 phút chỉ vì cảnh báo vào sai kênh.
+[02:54] Thảo (SRE): Dạ đúng anh, phần đó lỗi của bên em.
+[03:02] Duy (QA Lead): Bản 3.3 bên QA có test tải không? Em nhớ là không có trong kế hoạch.
+[03:11] Phúc (Backend Lead): Không có, vì tưởng chỉ thay đổi cấu hình worker.
+[03:20] Linh (Head of Product): Ừ, chỉ thay đổi cấu hình thôi mà sập 47 phút, hay thật.
+[03:31] Quân (CTO): Thôi, giờ không phải lúc đổ lỗi. Mình bàn cách khắc phục.
+[03:39] Thảo (SRE): Em đề xuất rollback về bản 3.2 ngay tối nay, bản đó chạy ổn ba tháng rồi.
+[03:49] Phúc (Backend Lead): Em thì muốn hotfix, chỉ cần tăng pool kết nối lên 150 và giới hạn worker, không phải rollback cả bản.
+[04:02] Thảo (SRE): Hotfix vội lại sinh lỗi khác, rollback an toàn hơn.
+[04:11] Quân (CTO): Anh đồng ý với Thảo. Chốt rollback về 3.2 tối nay, Thảo làm.
+[04:23] Thảo (SRE): Dạ em chuẩn bị luôn.
+[04:29] Duy (QA Lead): Khoan anh, bản 3.3 có tính năng voucher theo khung giờ cho Black Friday. Rollback về 3.2 là mất tính năng đó.
+[04:43] Linh (Head of Product): Voucher khung giờ là trọng tâm chiến dịch Black Friday đấy anh, mất là không chạy được.
+[04:54] Quân (CTO): À, anh quên mất phần đó.
+[05:01] Phúc (Backend Lead): Vì vậy em mới đề xuất hotfix, giữ nguyên tính năng.
+[05:12] Quân (CTO): Ok, vậy không rollback nữa. Hotfix tăng pool kết nối và giới hạn worker, Phúc làm, deploy trước 10 giờ sáng mai.
+[05:25] Thảo (SRE): Dạ vậy em hủy kế hoạch rollback.
+[05:32] Quân (CTO): Duy test hotfix trên staging trước khi deploy nhé, có test tải.
+[05:43] Duy (QA Lead): Dạ em test trong tối nay.
+[05:52] Quân (CTO): Còn vụ cảnh báo, Thảo chuyển toàn bộ cảnh báo thanh toán sang kênh trực mới và gắn on-call qua điện thoại.
+[06:07] Thảo (SRE): Dạ em làm trong hôm nay.
+[06:16] Thảo (SRE): Em sẽ viết báo cáo postmortem luôn nhé anh.
+[06:26] Quân (CTO): Không, postmortem để Phúc viết vì Phúc nắm code, Thảo review phần hạ tầng. Hạn thứ Sáu này.
+[06:37] Phúc (Backend Lead): Dạ em viết.
+[06:46] My (CSKH): Anh chị ơi, còn chuyện bồi thường cho khách thì sao ạ?
+[06:56] My (CSKH): Em đề xuất tặng voucher 50 nghìn cho tất cả khách có đơn lỗi tối qua.
+[07:06] Linh (Head of Product): 3.200 đơn nhân 50 nghìn là 160 triệu, khoản này phải qua tài chính.
+[07:18] Linh (Head of Product): Nếu tài chính duyệt thì mình tặng voucher 50 nghìn.
+[07:26] My (CSKH): Dạ, vậy em soạn sẵn nội dung.
+[07:33] Quân (CTO): Hôm trước anh Hòa bảo không được để khách chịu thiệt lần nào nữa đâu.
+[07:42] Linh (Head of Product): Ừ nhưng vẫn phải có tài chính duyệt.
+[07:50] Linh (Head of Product): Còn thông báo cho khách, ai đó cần gửi email xin lỗi.
+[08:01] My (CSKH): Dạ để em soạn thông báo.
+[08:08] Linh (Head of Product): Ừ, My soạn thông báo xin lỗi, chị duyệt trước 5 giờ chiều nay rồi mới gửi.
+[08:20] My (CSKH): Dạ.
+[08:28] Quân (CTO): Giờ sang Black Friday, ngày 28/11. Linh nói kế hoạch flash sale đi.
+[08:39] Linh (Head of Product): Bên product muốn flash sale lúc 0 giờ, mở tối đa 10.000 đơn mỗi giờ như kế hoạch cũ.
+[08:50] Quân (CTO): Sau tối qua thì anh không dám, anh đề xuất hoãn flash sale 0 giờ, chỉ chạy giảm giá bình thường cả ngày.
+[09:04] Linh (Head of Product): Hoãn flash sale thì mất điểm nhấn chiến dịch, đối thủ ai cũng chạy 0 giờ.
+[09:14] Thảo (SRE): Bên em có thể tăng gấp đôi số server trong tuần Black Friday, chi phí khoảng 80 triệu.
+[09:27] Quân (CTO): Giả sử traffic gấp ba bình thường thì gấp đôi server cũng không đủ.
+[09:39] Phúc (Backend Lead): Nếu có hàng đợi ở trang thanh toán thì server không bị dồn cùng lúc.
+[09:48] Duy (QA Lead): Em xin phép rời họp sớm, em phải chuẩn bị môi trường test tải. Load test cho Black Friday em chạy xong trước thứ Tư.
+[10:04] Quân (CTO): Ok Duy, nhớ gửi kết quả vào nhóm.
+[10:10] Linh (Head of Product): Vậy mình vẫn chạy flash sale nhé anh?
+[10:19] Quân (CTO): Anh vẫn chưa yên tâm.
+[10:28] Hòa (CEO): Chào mọi người, anh vào muộn. Đang đến đâu rồi?
+[10:35] Quân (CTO): Dạ đang bàn flash sale Black Friday anh. Em muốn hoãn flash sale 0 giờ, Linh muốn giữ 10.000 đơn mỗi giờ.
+[10:50] Hòa (CEO): Hai em tóm tắt lý do cho anh.
+[10:58] Linh (Head of Product): Flash sale 0 giờ là điểm nhấn, năm ngoái mang về 30% doanh thu cả ngày.
+[11:11] Quân (CTO): Hệ thống vừa sập tối qua, em sợ 0 giờ dồn traffic lại sập tiếp.
+[11:21] Phúc (Backend Lead): Nếu có hàng đợi thì em nghĩ chịu được khoảng 5.000 đơn mỗi giờ an toàn.
+[11:33] Hòa (CEO): Vậy thế này: flash sale 0 giờ vẫn chạy, nhưng giới hạn 5.000 đơn mỗi giờ và bắt buộc có hàng đợi ở trang thanh toán.
+[11:47] Hòa (CEO): Quyết như vậy, không bàn lại nữa.
+[11:53] Linh (Head of Product): Dạ em đồng ý.
+[12:02] Quân (CTO): Dạ em ok, có hàng đợi thì yên tâm hơn.
+[12:10] Hòa (CEO): Hàng đợi ai làm?
+[12:18] Phúc (Backend Lead): Dạ em làm được, nhưng em đang làm hotfix và postmortem.
+[12:29] Quân (CTO): Hàng đợi để Tú bên team checkout làm, Phúc review. Tú hôm nay nghỉ, anh sẽ giao lại sau họp.
+[12:40] Hòa (CEO): Hạn hàng đợi là bao giờ?
+[12:49] Quân (CTO): Trước 24/11 anh, để còn bốn ngày test.
+[12:57] Hòa (CEO): Ok.
+[13:03] Thảo (SRE): Còn việc tăng gấp đôi server thì sao anh?
+[13:10] Quân (CTO): Chờ kết quả load test của Duy thứ Tư rồi quyết, chưa thuê vội.
+[13:19] Thảo (SRE): Dạ vâng.
+[13:26] Hòa (CEO): Lúc nãy bên CSKH có nói gì về bồi thường không?
+[13:34] My (CSKH): Dạ em đề xuất voucher 50 nghìn cho khách có đơn lỗi, chị Linh bảo chờ tài chính duyệt.
+[13:45] Hòa (CEO): Vụ voucher đó anh duyệt luôn, không cần chờ tài chính. Tặng voucher 50 nghìn cho mọi đơn lỗi tối qua.
+[14:00] Hòa (CEO): Khoản 160 triệu anh sẽ báo anh Sơn bên tài chính sau.
+[14:09] Linh (Head of Product): Dạ vậy My gửi voucher kèm email xin lỗi luôn.
+[14:17] My (CSKH): Dạ, em gắn mã voucher vào email.
+[14:24] Hòa (CEO): Với 214 khách bị trừ tiền mà không có đơn, ngoài voucher thì CSKH gọi điện xin lỗi từng người.
+[14:39] My (CSKH): Dạ bên em chia nhau gọi trong hai ngày tới.
+[14:46] Linh (Head of Product): Có cần thông báo cho đối tác ngân hàng về sự cố không anh?
+[14:57] Quân (CTO): Cái này anh không chắc, hợp đồng có điều khoản báo cáo sự cố không nhỉ?
+[15:07] Hòa (CEO): Anh cũng không nhớ.
+[15:16] Linh (Head of Product): Hay là báo luôn cho chắc?
+[15:25] Quân (CTO): Báo thì họ lại yêu cầu kiểm toán, mất thời gian.
+[15:34] Hòa (CEO): Thôi chuyện ngân hàng mình chưa kết luận được.
+[15:44] Thảo (SRE): Em hỏi thêm, sau sự cố này mình có áp dụng đóng băng deploy trước Black Friday không ạ?
+[15:57] Quân (CTO): Có, anh muốn đóng băng deploy từ 25/11 đến hết 30/11, chỉ cho phép hotfix khẩn cấp.
+[16:08] Linh (Head of Product): Đóng băng từ 25/11 thì tính năng banner đếm ngược của bên em có kịp không?
+[16:19] Phúc (Backend Lead): Banner chỉ là frontend, deploy trước 25/11 được chị.
+[16:30] Hòa (CEO): Ok, đóng băng deploy từ 25/11 đến hết 30/11 như Quân nói.
+[16:40] Quân (CTO): Dạ.
+[16:47] Linh (Head of Product): Em hỏi nốt, có nên làm trang trạng thái hệ thống công khai cho khách xem không anh?
+[16:58] Quân (CTO): Em nghĩ có thể làm, nhưng sau Black Friday.
+[17:07] Hòa (CEO): Để sau Black Friday bàn tiếp.
+[17:15] Hòa (CEO): Quân tóm lại cho anh nhé.
+[17:24] Quân (CTO): Dạ. Hotfix pool kết nối, không rollback; Phúc deploy trước 10 giờ sáng mai, Duy test tối nay; Thảo chuyển cảnh báo sang kênh trực mới trong hôm nay.
+[17:44] Quân (CTO): Flash sale 0 giờ vẫn chạy, giới hạn 5.000 đơn mỗi giờ, có hàng đợi; Tú làm hàng đợi trước 24/11, Phúc review.
+[17:59] Quân (CTO): Voucher 50 nghìn cho mọi đơn lỗi, gửi kèm email xin lỗi, Linh duyệt trước 5 giờ chiều nay; CSKH gọi 214 khách trong hai ngày.
+[18:15] Quân (CTO): Đóng băng deploy 25 đến 30/11; tăng server chờ load test thứ Tư; postmortem Phúc viết, hạn thứ Sáu.
+[18:29] Hòa (CEO): Chuyện ngân hàng với trang trạng thái thì sao?
+[18:37] Quân (CTO): Dạ ngân hàng chưa kết luận, trang trạng thái để sau Black Friday.
+[18:47] Hòa (CEO): Ok. Lần này làm cho chắc, Black Friday mà sập là mất cả năm đấy.
+[18:59] Linh (Head of Product): Dạ.
+[19:07] Quân (CTO): Cảm ơn mọi người, kết thúc họp.

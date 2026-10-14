@@ -1,0 +1,110 @@
+[00:05] Speaker 1: Alo alo, nghe rõ không mọi người.
+[00:14] Speaker 2: Dạ rõ anh ạ, bên em vào đủ rồi.
+[00:22] Speaker 3: Chờ chút, mic chị bị rè, [không nghe rõ]
+[00:34] Speaker 3: Được chưa, nghe rõ chưa?
+[00:46] Speaker 1: Rõ rồi.
+[00:50] Speaker 2: Dạ em xin giới thiệu lại, em là Vân bên kinh doanh, còn đây là anh Kiên bên kỹ thuật.
+[01:02] Speaker 4: Chào anh chị ạ.
+[01:13] Speaker 1: Ok, hôm nay mình chốt nốt mấy điểm về hợp đồng CRM nhé.
+[01:26] Speaker 2: Dạ vâng, như bên em trình bày hôm thứ Hai, bên em có ba gói, anh chị xem lại giúp em.
+[01:41] Speaker 2: Gói Starter cho đội nhỏ, gói Business và gói Enterprise.
+[01:53] Speaker 2: Gói Business thì giá trọn gói là 35 triệu một năm, đã gồm hỗ trợ on bốt.
+[02:11] Speaker 3: 35 triệu là cho bao nhiêu người dùng em?
+[02:25] Speaker 2: Dạ tối đa 50 người dùng chị ạ.
+[02:37] Speaker 3: Vậy rẻ hơn bên cũ nhiều.
+[02:44] Speaker 1: Nhưng bên anh có khoảng 80 người dùng, phải lên gói trên.
+[02:56] Speaker 4: Dạ gói trên thì [không nghe rõ] tính theo đầu người.
+[03:06] Speaker 1: Tính theo đầu người là bao nhiêu một người em?
+[03:20] Speaker 4: Dạ khoảng [nói chồng]
+[03:25] Speaker 2: [nói chồng] một năm anh, chưa gồm VAT.
+[03:33] Speaker 3: Thôi để kế toán bên chị tính lại rồi so với phương án trong email hôm qua.
+[03:46] Speaker 1: Phương án trong email thì anh thấy ổn rồi đấy.
+[03:54] Speaker 2: Dạ, vậy là anh đồng ý theo phương án đó ạ?
+[04:05] Speaker 1: Ừ, cứ thế.
+[04:09] Speaker 3: Nhưng chị vẫn tính lại cho chắc nhé.
+[04:20] Speaker 1: Ừ em cứ tính.
+[04:31] Speaker 2: Dạ, tiếp theo là phần triển khai. Anh Kiên trình bày giúp em.
+[04:46] Speaker 4: Dạ, triển khai gồm ba giai đoạn: cài đặt, mai gờ rết dữ liệu và đào tạo.
+[05:03] Speaker 4: Cài đặt thì bên em làm trên cloud, server đặt ở Singapore.
+[05:18] Speaker 3: Dữ liệu khách hàng để ở nước ngoài có sao không anh?
+[05:33] Speaker 1: Cái này anh phải hỏi bên pháp chế, quy định dữ liệu cá nhân giờ chặt lắm.
+[05:46] Speaker 4: Bên em cũng có phương án server ở Việt Nam nhưng giá cao hơn khoảng 15%.
+[06:02] Speaker 1: Ừ để anh hỏi pháp chế rồi báo em.
+[06:09] Speaker 4: Dạ. Về mai gờ rết dữ liệu thì bên em cần file xuất từ hệ thống cũ, định dạng CSV.
+[06:21] Speaker 3: Bên anh gửi được, nhưng dữ liệu khách hàng có số điện thoại, phải ký thỏa thuận bảo mật trước.
+[06:36] Speaker 2: Dạ được, bên em gửi mẫu thỏa thuận bảo mật luôn.
+[06:51] Speaker 1: Ok. Đét lai mai gờ rết là khi nào em?
+[07:01] Speaker 4: Nếu nhận dữ liệu trước ngày 3 thì bên em xong trước 30 tháng 11.
+[07:15] Speaker 1: Ngày 3 là tháng nào? Tháng 11 hả?
+[07:27] Speaker 4: [nói chồng] dạ tháng 11 ạ hoặc [không nghe rõ]
+[07:39] Speaker 3: Được, bên anh gửi file trước ngày 3.
+[07:52] Speaker 4: Dữ liệu cũ có khoảng bao nhiêu bản ghi anh?
+[08:05] Speaker 1: Khoảng hai trăm nghìn khách hàng, cộng lịch sử giao dịch năm năm.
+[08:20] Speaker 4: Lịch sử giao dịch năm năm thì nặng, bên em đề xuất chỉ chuyển hai năm gần nhất.
+[08:37] Speaker 3: Kế toán thì cần đủ năm năm để đối chiếu thuế.
+[08:48] Speaker 4: Vậy ba năm còn lại bên em lưu dạng file lưu trữ, tra cứu chậm hơn nhưng vẫn có.
+[09:04] Speaker 1: Được, làm vậy đi.
+[09:08] Speaker 2: Còn phần đào tạo người dùng, bên em đề xuất hai buổi trực tiếp tại văn phòng anh.
+[09:24] Speaker 1: Trực tiếp thì khó gom người, làm online được không?
+[09:34] Speaker 2: Online cũng được anh, nhưng hiệu quả thấp hơn.
+[09:47] Speaker 1: Hay là một buổi trực tiếp, một buổi online.
+[09:55] Speaker 3: Thôi được rồi, làm luôn đi.
+[10:04] Speaker 2: Dạ vậy em ghi nhận phương án đào tạo ạ.
+[10:15] Speaker 4: Mỗi buổi khoảng ba tiếng, bên em gửi tài liệu trước một tuần.
+[10:28] Speaker 1: Ừ.
+[10:32] Speaker 2: Về hỗ trợ sau triển khai, gói của anh có hỗ trợ giờ hành chính, phản hồi trong bốn giờ.
+[10:45] Speaker 1: Bên anh có ca tối đến 10 giờ, ngoài giờ hành chính thì sao?
+[11:01] Speaker 2: Hỗ trợ ngoài giờ thì phải mua thêm gói hỗ trợ mở rộng ạ.
+[11:17] Speaker 1: Bao nhiêu em?
+[11:22] Speaker 2: Dạ khoảng [không nghe rõ] mươi triệu một năm.
+[11:35] Speaker 3: Đắt thế.
+[11:39] Speaker 1: Cái này anh cân nhắc thêm.
+[11:50] Speaker 2: Dạ vâng.
+[11:55] Speaker 1: Về giá, bên anh muốn giảm thêm.
+[12:01] Speaker 2: Dạ em xin phép báo sếp, tối đa em giảm được 10%.
+[12:13] Speaker 1: 10% là còn bao nhiêu?
+[12:24] Speaker 2: Dạ còn khoảng bốn linh năm ạ.
+[12:36] Speaker 1: Ừ được, mức đó thì ok.
+[12:42] Speaker 3: Thanh toán thì bên chị muốn chia hai đợt.
+[12:49] Speaker 2: Dạ được chị, đợt một 50% khi ký, đợt hai 50% khi nghiệm thu.
+[12:58] Speaker 3: Ok.
+[13:07] Speaker 2: Vậy anh đồng ý mình ký trong tuần này nhé?
+[13:19] Speaker 2: Ok vậy em gửi hợp đồng thứ Sáu này.
+[13:29] Speaker 3: Hợp đồng gửi qua email chị, cc anh luôn.
+[13:39] Speaker 2: Dạ vâng.
+[13:42] Speaker 4: Một điểm nữa, hệ thống bên em chưa tích hợp được tổng đài cũ của anh, phải mua thêm module.
+[13:59] Speaker 1: Module đó bao nhiêu?
+[14:04] Speaker 4: [không nghe rõ] một năm anh.
+[14:11] Speaker 1: Cái đó tính sau, giai đoạn một chưa cần.
+[14:19] Speaker 3: Như lần trước anh Tâm bảo thì phải có tổng đài ngay từ đầu mà.
+[14:28] Speaker 1: Ừ thì để anh hỏi lại anh Tâm.
+[14:37] Speaker 4: Nếu cần tích hợp ngay thì bên em phải biết trước ngày 10 để kịp làm.
+[14:53] Speaker 1: Ok, anh báo trước ngày 10.
+[15:02] Speaker 2: Dạ, còn thời hạn hợp đồng, bên em đề xuất ba năm để giữ giá.
+[15:15] Speaker 3: Ba năm thì dài quá, chị muốn một năm thôi.
+[15:24] Speaker 2: Một năm thì năm sau giá có thể tăng khoảng 10% chị ạ.
+[15:32] Speaker 1: Hai năm đi, cân bằng.
+[15:42] Speaker 2: Dạ em phải hỏi lại sếp phần hai năm.
+[15:54] Speaker 1: Ok em hỏi rồi báo anh.
+[16:04] Speaker 4: Anh chị có cần tích hợp với phần mềm kế toán không ạ?
+[16:14] Speaker 3: Có, bên chị đang dùng Misa.
+[16:26] Speaker 4: Misa thì bên em có sẵn kết nối, không mất phí.
+[16:40] Speaker 3: Tốt quá.
+[16:50] Speaker 1: Ứng dụng di động thì có không em? Nhân viên sales đi thị trường nhiều.
+[17:06] Speaker 4: Có anh, đã gồm trong gói, chạy được cả Android và iOS.
+[17:16] Speaker 1: Ok.
+[17:23] Speaker 2: Anh chị còn câu hỏi nào không ạ?
+[17:35] Speaker 3: Phân quyền dữ liệu thì sao, nhân viên này có xem được khách của nhân viên khác không?
+[17:50] Speaker 4: Phân quyền theo nhóm được chị, quản lý xem được hết, nhân viên chỉ xem khách của mình.
+[18:06] Speaker 3: Vậy ổn.
+[18:15] Speaker 1: Báo cáo thì có xuất ra Excel được không?
+[18:26] Speaker 4: Được anh, và có cả báo cáo tự gửi email hằng tuần.
+[18:38] Speaker 1: Tốt.
+[18:46] Speaker 2: Dạ, vậy em tổng hợp lại các điểm hôm nay gửi anh chị qua email nhé.
+[18:56] Speaker 3: Ừ em gửi đi, có gì bên chị bổ sung.
+[19:08] Speaker 1: Nhớ ghi rõ phần dữ liệu năm năm nhé.
+[19:20] Speaker 2: Dạ vâng anh.
+[19:24] Speaker 2: Dạ, vậy hôm nay mình thống nhất như vậy nhé anh chị.
+[19:38] Speaker 1: Ok, cảm ơn em.
+[19:44] Speaker 3: Cảm ơn hai em.
+[19:48] Speaker 4: Dạ cảm ơn anh chị.
