@@ -43,6 +43,7 @@ _NO_SAMPLING_RE = re.compile(r"claude-(fable|mythos)|claude-(opus|sonnet|haiku)-
 # Models that accept the server-side refusal fallback `fallbacks: "default"`.
 _FALLBACK_MODELS = ("claude-sonnet-5-5", "claude-opus-5-5", "claude-opus-5", "claude-fable-5-1")
 # OpenAI reasoning models only accept the default temperature.
+OPENAI_DEFAULT_BASE_URL = "https://api.openai.com/v1"
 _OPENAI_REASONING_RE = re.compile(r"^(o\d|gpt-5)")
 
 
@@ -235,7 +236,11 @@ class OpenAILLM(LLMClient):
         if not settings.openai_api_key:
             raise LLMError("Thiếu OPENAI_API_KEY. Hãy tạo file .env từ .env.example.")
         self._openai = openai
-        self._client = openai.OpenAI(api_key=settings.openai_api_key, base_url=settings.openai_base_url)
+        # Always pass base_url: otherwise the SDK falls back to the raw OPENAI_BASE_URL env var,
+        # which may hold an unparsed inline comment from .env.
+        self._client = openai.OpenAI(
+            api_key=settings.openai_api_key, base_url=settings.openai_base_url or OPENAI_DEFAULT_BASE_URL
+        )
         self._temperature = settings.temperature
         self._max_tokens = max_tokens
 

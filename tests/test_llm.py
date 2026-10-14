@@ -134,3 +134,12 @@ def test_load_settings_provider_defaults(tmp_path, monkeypatch):
     monkeypatch.setenv("LLM_PROVIDER", "gemini")
     with pytest.raises(ValueError):
         load_settings(empty_env)
+
+
+def test_openai_base_url_ignores_inline_comment(tmp_path, monkeypatch):
+    monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
+    env = tmp_path / ".env"
+    env.write_text("OPENAI_API_KEY=k\nOPENAI_BASE_URL=        # để trống\n", encoding="utf-8")
+    s = load_settings(env)
+    assert s.openai_base_url is None
+    assert str(OpenAILLM(s)._client.base_url).startswith("https://api.openai.com/v1")
