@@ -1,4 +1,6 @@
-# Multi_AI_for_meeting – Meeting Decision Extractor (MVP)
+<p align="center"><img src="app/assets/meetsync_logo.png" alt="MeetSync" width="420"></p>
+
+# MeetSync – AI trích xuất quyết định cuộc họp (MVP)
 
 Hệ thống nhận **transcript cuộc họp tiếng Việt** (`.txt`, `.vtt`) và trả về danh sách có cấu trúc:
 quyết định cuối cùng, việc cần làm, vướng mắc, yêu cầu, vấn đề chưa chốt và tri thức mới.

@@ -34,7 +34,10 @@ from meeting_extractor.models import Item, ItemType, MeetingMeta, Participant, R
 from meeting_extractor.parsing import is_anonymous_speaker, parse_text  # noqa: E402
 from meeting_extractor.pipeline import load_result, run_text  # noqa: E402
 
-st.set_page_config(page_title="Meeting AI", page_icon="🗂️", layout="wide")
+ASSETS = Path(__file__).resolve().parent / "assets"
+LOGO = ASSETS / "meetsync_logo.png"
+ICON = ASSETS / "meetsync_icon.png"
+st.set_page_config(page_title="MeetSync", page_icon=str(ICON), layout="wide")
 SETTINGS = load_settings()
 RUNS_DIR = SETTINGS.runs_dir
 
@@ -87,12 +90,8 @@ CSS = """
 :root { --brand:#2f5bea; --ink:#101828; --muted:#667085; --line:#eaecf0; --soft:#f7f8fc; }
 .stApp { background: var(--soft); }
 [data-testid="stSidebar"] { background:#fff; border-right:1px solid var(--line); }
+[data-testid="stSidebar"] [data-testid="stElementToolbar"] { display:none; }
 .block-container { padding-top: 1.6rem; max-width: 1500px; }
-.brand { display:flex; gap:.6rem; align-items:center; margin-bottom:1rem; }
-.brand-logo { width:38px; height:38px; border-radius:10px; background:linear-gradient(135deg,#3b6cf6,#2443b8);
-  color:#fff; display:flex; align-items:center; justify-content:center; font-size:20px; }
-.brand-name { font-weight:700; font-size:1.15rem; color:var(--ink); line-height:1.1; }
-.brand-sub { font-size:.75rem; color:var(--muted); }
 .crumb { color:var(--muted); font-size:.85rem; margin-bottom:.2rem; }
 .crumb b { color:var(--ink); }
 .title { font-size:1.6rem; font-weight:700; color:var(--ink); margin:0 0 .3rem 0; }
@@ -228,11 +227,7 @@ def set_review(run_dir: Path, item_id: str, review: str, edits: dict[str, Any] |
 
 def sidebar() -> None:
     with st.sidebar:
-        st.markdown(
-            '<div class="brand"><div class="brand-logo">☁</div><div><div class="brand-name">Meeting AI</div>'
-            '<div class="brand-sub">Trích xuất quyết định cuộc họp</div></div></div>',
-            unsafe_allow_html=True,
-        )
+        st.image(str(LOGO), width="stretch")
         if st.button("🏠  Trang chủ – Phân tích mới", use_container_width=True,
                      type="primary" if st.session_state.page == "new" else "secondary"):
             st.session_state.page = "new"
