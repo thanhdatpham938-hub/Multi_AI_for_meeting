@@ -252,19 +252,6 @@ hỏi một LLM nhỏ câu có/không (`prompts/match.md`).
 | Owner/deadline bịa | 0 |
 | Độ ổn định (`--repeat 3`) | ≤ 10% |
 
-Chỉ số tổng hợp tính trên TC1–TC5; TC6 và TC7 chấm theo tiêu chí riêng (giới hạn đã biết).
-
-### Kết quả eval mới nhất
-
-**Chưa có.** Bộ eval tự động chưa được chạy với API thật, nên bước tinh chỉnh prompt theo eval
-(bước 7) chưa thực hiện. Những gì đã kiểm chứng offline:
-
-- Đáp án của cả 7 ca nhất quán với quy tắc hậu kiểm: một kết quả "hoàn hảo" dựng từ đáp án đi qua
-  `rules.py` đạt toàn bộ ngưỡng (`tests/test_metrics.py`).
-- Metrics bắt đúng lỗi chốt nhầm, owner bịa, action thừa, trích dẫn lệch và đổi trạng thái giữa các lần chạy.
-
-Sau khi điền key: chạy `uv run python eval/run_eval.py --repeat 3`, sửa prompt theo các ca sai,
-chạy lại **toàn bộ** bộ eval sau mỗi lần sửa, rồi dán `eval/results/latest.md` vào mục này.
 
 ## Bộ dữ liệu kiểm thử (`tests/fixtures/`)
 
@@ -303,33 +290,7 @@ chưa chấm được các case này).
   (bỏ sót hoặc `open` đều chấp nhận được).
 - Không xử lý audio/ASR, không liên kết nhiều cuộc họp, không có chatbot hỏi đáp, không đăng nhập/phân quyền.
 
-## Giả định đã chọn
 
-Theo CLAUDE.md §12, những điểm chưa rõ được giải quyết theo cách đơn giản nhất:
-
-1. **Panel "Trợ lý hỏi đáp" trong mẫu UI được thay bằng khung "Thông tin cuộc họp"** – chatbot/RAG
-   nằm ngoài phạm vi MVP; khung này là nơi nhập meta mà mẫu đang thiếu.
-2. `MeetingMeta` có thêm `date`, `start_time`, `end_time`, `project` (tùy chọn) để hiển thị như mẫu.
-3. **Nhà cung cấp LLM:** đặc tả ghi dùng SDK `anthropic`, nhưng dự án dùng key OpenAI nên mặc định là
-   `LLM_PROVIDER=openai` (`OpenAILLM`, Chat Completions ở chế độ JSON `response_format={"type": "json_object"}`).
-   `AnthropicLLM` vẫn giữ nguyên, chuyển qua bằng `LLM_PROVIDER=anthropic`. Logic chung (validate Pydantic,
-   retry 2 lần kèm lỗi, đếm token/chi phí) nằm ở lớp cha `LLMClient`, nên đổi nhà cung cấp không ảnh hưởng agent.
-4. **Temperature:** với OpenAI, `gpt-4.1*`/`gpt-4o*` nhận `temperature=0` và `seed=0`; các model suy luận
-   (`o1`, `o3`, `o4-mini`, `gpt-5*`) chỉ nhận nhiệt độ mặc định nên hai tham số này không được gửi. Với Anthropic,
-   Claude Haiku 5.5 / Sonnet 5.5 cũng từ chối `temperature`. Độ ổn định dựa vào prompt chặt, schema Pydantic và
-   quy tắc bằng code; đo bằng `--repeat 3`. Model từ chối trả lời → báo lỗi rõ ràng, chủ đề đó bị bỏ qua kèm cảnh báo.
-5. Hai prompt bổ sung ngoài 4 file của đặc tả: `segment_merge.md` (gộp chủ đề khi transcript > 300 câu)
-   và `match.md` (LLM so khớp có/không trong eval).
-6. **Quy tắc 2:** owner hợp lệ nếu tên xuất hiện trong câu bằng chứng **hoặc** là người nói một câu bằng
-   chứng (ví dụ "Speaker 2: Ok, em sẽ dựng khung dự án"). Deadline phải xuất hiện nguyên văn (không phân biệt hoa thường).
-7. **Quy tắc 5:** "người nói ở câu chốt" = người nói của câu bằng chứng muộn nhất; áp dụng cho mọi item `decision`.
-8. ID item gán theo loại và thứ tự xuất hiện (`d01`, `a01`, `b01`, `r01`, `o01`, `k01`); danh sách sắp
-   xếp mục có cờ/độ tin cậy thấp lên đầu.
-9. Một chủ đề lỗi LLM sau khi hết lượt thử → bỏ qua chủ đề đó, ghi cảnh báo, các chủ đề khác vẫn chạy.
-10. Đáp án `*.expected.json` có thêm khóa phục vụ chấm: `optional` (mục không bắt buộc), `accept_statuses`,
-    `required_flags`, `min/max_confidence`, `history_superseded`, `forbidden`, `same_topic`, `expect_no_confirmed`.
-11. Độ ổn định tính trên các mục của đáp án: một mục "đổi trạng thái" nếu trạng thái (hoặc việc có/không
-    được tìm thấy) khác nhau giữa các lần chạy.
 
 ## Cấu trúc thư mục
 
