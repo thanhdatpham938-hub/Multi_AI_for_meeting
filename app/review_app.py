@@ -38,13 +38,31 @@ st.set_page_config(page_title="Meeting AI", page_icon="🗂️", layout="wide")
 SETTINGS = load_settings()
 RUNS_DIR = SETTINGS.runs_dir
 
-GROUPS: list[tuple[str, str, str, list[ItemType]]] = [
-    # key, label, icon, types
-    ("decision", "Quyết định", "✅", [ItemType.decision]),
-    ("action", "Việc cần làm", "☑️", [ItemType.action]),
-    ("open", "Vấn đề còn mở", "⚠️", [ItemType.open_issue]),
-    ("other", "Vấn đề khác", "🧩", [ItemType.blocker, ItemType.request, ItemType.knowledge]),
+GROUPS: list[tuple[str, str, list[ItemType]]] = [
+    # key, label, types
+    ("decision", "Quyết định", [ItemType.decision]),
+    ("action", "Việc cần làm", [ItemType.action]),
+    ("open", "Vấn đề còn mở", [ItemType.open_issue]),
+    ("other", "Vấn đề khác", [ItemType.blocker, ItemType.request, ItemType.knowledge]),
 ]
+# Line icons (Lucide-style SVG paths): key -> (paths, stroke colour, tile background)
+GROUP_ICONS: dict[str, tuple[str, str, str]] = {
+    "decision": ('<circle cx="12" cy="12" r="10"/><path d="m8.5 12 2.5 2.5 4.5-5"/>', "#16a34a", "#e3f5e9"),
+    "action": ('<path d="m3 6 1.5 1.5L7.5 4.5"/><path d="m3 12.5 1.5 1.5 3-3"/><path d="m3 19 1.5 1.5 3-3"/>'
+               '<path d="M11 6h10"/><path d="M11 12.5h10"/><path d="M11 19h10"/>', "#2f5bea", "#e6edfe"),
+    "open": ('<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>'
+             '<path d="M12 9v4"/><path d="M12 17h.01"/>', "#d97706", "#fdf0dc"),
+    "other": ('<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/>'
+              '<rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+              "#7c3aed", "#f0e9fd"),
+}
+
+
+def group_icon(key: str, size: int = 22) -> str:
+    paths, color, _ = GROUP_ICONS[key]
+    return (f'<svg xmlns="http://www.w3.org/2000/svg" width="{size}" height="{size}" viewBox="0 0 24 24" '
+            f'fill="none" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" '
+            f'style="vertical-align:-0.2em">{paths}</svg>')
 TYPE_LABEL = {
     ItemType.decision: "Quyết định", ItemType.action: "Việc cần làm", ItemType.blocker: "Vướng mắc",
     ItemType.request: "Yêu cầu", ItemType.open_issue: "Vấn đề còn mở", ItemType.knowledge: "Tri thức mới",
@@ -82,7 +100,7 @@ CSS = """
 .chip { background:#eef2ff; color:#3a4ed8; border-radius:999px; padding:.1rem .65rem; font-size:.78rem; }
 .card { background:#fff; border:1px solid var(--line); border-radius:14px; padding:1rem 1.1rem; min-height:122px; }
 .stat { display:flex; gap:.8rem; align-items:flex-start; }
-.stat-ico { flex:0 0 40px; width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:20px; }
+.stat-ico { flex:0 0 44px; width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:20px; }
 .stat-label { font-weight:600; color:var(--ink); font-size:.92rem; }
 .stat-num { font-size:1.7rem; font-weight:700; color:var(--ink); line-height:1.2; }
 .stat-sub { color:var(--muted); font-size:.78rem; }
@@ -399,16 +417,15 @@ def group_items(items: list[Item], types: list[ItemType]) -> list[Item]:
 
 
 def stat_cards(items: list[Item]) -> None:
-    colors = {"decision": "#e7f6ec", "action": "#e8f0fe", "open": "#fff3e0", "other": "#f1ebfb"}
     undecided = sum(1 for i in items if i.type == ItemType.decision and i.status in (Status.open, Status.deferred))
     cols = st.columns(4)
-    for col, (key, label, icon, types) in zip(cols, GROUPS):
+    for col, (key, label, types) in zip(cols, GROUPS):
         n = len(group_items(items, types))
         sub = "đã trích xuất"
         if key == "open" and undecided:
             sub = f"+ {undecided} quyết định chưa chốt/hoãn"
         col.markdown(
-            f'<div class="card stat"><div class="stat-ico" style="background:{colors[key]}">{icon}</div>'
+            f'<div class="card stat"><div class="stat-ico" style="background:{GROUP_ICONS[key][2]}">{group_icon(key)}</div>'
             f'<div><div class="stat-label">{label}</div><div class="stat-num">{n}</div>'
             f'<div class="stat-sub">{sub}</div></div></div>',
             unsafe_allow_html=True,
@@ -609,15 +626,15 @@ def page_run() -> None:
             st.markdown(f"**Danh sách kết quả** <span class='count-pill'>{len(result.items)} mục</span> "
                         "<span class='muted'>· mục có cờ hoặc độ tin cậy thấp được đưa lên đầu</span>",
                         unsafe_allow_html=True)
-            for key, label, icon, types in GROUPS:
+            for key, label, types in GROUPS:
                 items = group_items(result.items, types)
                 if not items:
                     continue
                 with st.container(border=True):
-                    st.markdown(f"<span class='group-head'>{icon} {label} ({len(items)})</span>",
+                    st.markdown(f"<span class='group-head'>{group_icon(key, 18)}&nbsp; {label} ({len(items)})</span>",
                                 unsafe_allow_html=True)
                     item_table(run_dir, result, items, key, f"ov-{key}")
-        for tab, (key, label, icon, types) in zip(tabs[1:], GROUPS):
+        for tab, (key, label, types) in zip(tabs[1:], GROUPS):
             with tab:
                 items = group_items(result.items, types)
                 if not items:
