@@ -74,7 +74,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         llm = make_llm(settings)
     except LLMError as exc:
-        print(f"Lỗi: {exc}\nEval gọi API thật – cần ANTHROPIC_API_KEY trong .env.", file=sys.stderr)
+        print(f"Lỗi: {exc}\nEval gọi API thật – cần OPENAI_API_KEY (hoặc ANTHROPIC_API_KEY nếu LLM_PROVIDER=anthropic) trong .env.", file=sys.stderr)
         return 2
     judge = None if args.no_llm_match else make_judge(llm, settings.model_light)
 

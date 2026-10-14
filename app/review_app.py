@@ -348,7 +348,7 @@ def analyze(text: str, name: str, meta: MeetingMeta | None) -> None:
             result = run_text(text, name, meta, settings=SETTINGS, progress=progress)
         except LLMError as exc:
             status.update(label="Lỗi khi gọi LLM", state="error")
-            error = f"{exc}\n\nKiểm tra file `.env` (ANTHROPIC_API_KEY, MODEL_LIGHT, MODEL_STRONG)."
+            error = f"{exc}\n\nKiểm tra file `.env` (LLM_PROVIDER, OPENAI_API_KEY, MODEL_LIGHT, MODEL_STRONG)."
         except ValueError as exc:
             status.update(label="Transcript không hợp lệ", state="error")
             error = str(exc)

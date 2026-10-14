@@ -31,12 +31,19 @@ PRICING: dict[str, tuple[float, float]] = {
     "claude-opus-5": (5.00, 25.00),
     "claude-haiku-4-5": (1.00, 5.00),
     "claude-sonnet-4-6": (3.00, 15.00),
+    "gpt-4.1": (2.00, 8.00),
+    "gpt-4.1-mini": (0.40, 1.60),
+    "gpt-4.1-nano": (0.10, 0.40),
+    "gpt-4o": (2.50, 10.00),
+    "gpt-4o-mini": (0.15, 0.60),
 }
 
 # Models that reject non-default sampling params (temperature) with HTTP 400.
 _NO_SAMPLING_RE = re.compile(r"claude-(fable|mythos)|claude-(opus|sonnet|haiku)-5(-\d+)?$|opus-4-[78]")
 # Models that accept the server-side refusal fallback `fallbacks: "default"`.
 _FALLBACK_MODELS = ("claude-sonnet-5-5", "claude-opus-5-5", "claude-opus-5", "claude-fable-5-1")
+# OpenAI reasoning models only accept the default temperature.
+_OPENAI_REASONING_RE = re.compile(r"^(o\d|gpt-5)")
 
 
 class LLMError(RuntimeError):
@@ -218,6 +225,55 @@ class AnthropicLLM(LLMClient):
         return text, response.usage.input_tokens, response.usage.output_tokens
 
 
+class OpenAILLM(LLMClient):
+    """OpenAI Chat Completions via the official `openai` SDK, in JSON mode."""
+
+    def __init__(self, settings: Settings, max_tokens: int = 16000) -> None:
+        super().__init__()
+        import openai
+
+        if not settings.openai_api_key:
+            raise LLMError("Thiếu OPENAI_API_KEY. Hãy tạo file .env từ .env.example.")
+        self._openai = openai
+        self._client = openai.OpenAI(api_key=settings.openai_api_key, base_url=settings.openai_base_url)
+        self._temperature = settings.temperature
+        self._max_tokens = max_tokens
+
+    def _call(self, model: str, system: str, user: str, purpose: str) -> tuple[str, int, int]:
+        kwargs: dict[str, Any] = {
+            "model": model,
+            "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
+            "response_format": {"type": "json_object"},
+            "max_completion_tokens": self._max_tokens,
+        }
+        if not _OPENAI_REASONING_RE.match(model):
+            kwargs["seed"] = 0
+            if self._temperature is not None:
+                kwargs["temperature"] = self._temperature
+        try:
+            response = self._client.chat.completions.create(**kwargs)
+        except self._openai.AuthenticationError as exc:
+            raise LLMError("OPENAI_API_KEY không hợp lệ (401).") from exc
+        except self._openai.NotFoundError as exc:
+            raise LLMError(f"Không tìm thấy model '{model}'. Kiểm tra MODEL_LIGHT/MODEL_STRONG.") from exc
+        except self._openai.RateLimitError as exc:
+            raise LLMError(f"Vượt giới hạn hoặc hết hạn mức OpenAI (429) khi gọi {purpose}.") from exc
+        except self._openai.APIStatusError as exc:
+            raise LLMError(f"Lỗi API OpenAI ({exc.status_code}) khi gọi {purpose}: {exc.message}") from exc
+        except self._openai.APIConnectionError as exc:
+            raise LLMError(f"Không kết nối được tới OpenAI khi gọi {purpose}.") from exc
+
+        choice = response.choices[0]
+        if getattr(choice.message, "refusal", None):
+            raise LLMError(f"[{purpose}] Model từ chối xử lý yêu cầu: {choice.message.refusal}")
+        usage = response.usage
+        return (
+            choice.message.content or "",
+            usage.prompt_tokens if usage else 0,
+            usage.completion_tokens if usage else 0,
+        )
+
+
 Handler = Callable[[str, str], Any]
 
 
@@ -252,4 +308,6 @@ class FakeLLM(LLMClient):
 
 
 def make_llm(settings: Settings) -> LLMClient:
-    return AnthropicLLM(settings)
+    if settings.provider == "anthropic":
+        return AnthropicLLM(settings)
+    return OpenAILLM(settings)

@@ -45,7 +45,7 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
-> Windows: nếu pip báo `No such file or directory … anthropic	ypeseta\…`, đường dẫn đã vượt 260 ký tự –
+> Windows: nếu pip báo `No such file or directory … anthropic\types\beta\…`, đường dẫn đã vượt 260 ký tự –
 > đặt thư mục dự án/venv ở đường dẫn ngắn hơn hoặc bật
 > [Long Path](https://pip.pypa.io/warnings/enable-long-paths).
 
@@ -59,9 +59,12 @@ Mở `.env` và điền:
 
 | Biến | Ý nghĩa | Mặc định |
 | --- | --- | --- |
-| `ANTHROPIC_API_KEY` | API key của Anthropic | (bắt buộc để chạy phân tích thật) |
-| `MODEL_LIGHT` | Model cho Agent 1, 2 | `claude-haiku-5-5` |
-| `MODEL_STRONG` | Model cho Agent 3, 4 | `claude-sonnet-5-5` |
+| `LLM_PROVIDER` | Nhà cung cấp LLM: `openai` hoặc `anthropic` | `openai` |
+| `OPENAI_API_KEY` | API key của OpenAI | (bắt buộc khi dùng OpenAI) |
+| `OPENAI_BASE_URL` | Endpoint tương thích OpenAI (Azure, proxy…) | để trống = api.openai.com |
+| `MODEL_LIGHT` | Model cho Agent 1, 2 | `gpt-4.1-mini` (Anthropic: `claude-haiku-5-5`) |
+| `MODEL_STRONG` | Model cho Agent 3, 4 | `gpt-4.1` (Anthropic: `claude-sonnet-5-5`) |
+| `ANTHROPIC_API_KEY` | API key của Anthropic | chỉ cần khi `LLM_PROVIDER=anthropic` |
 | `LLM_TEMPERATURE` | Nhiệt độ | `0` – chỉ gửi cho model còn hỗ trợ (xem Giả định) |
 | `RUNS_DIR` | Thư mục lưu kết quả | `runs/` |
 
@@ -133,7 +136,7 @@ Mở http://localhost:8501, rồi:
 ## Kiểm thử
 
 ```bash
-uv run pytest            # 72 test, không gọi API, không cần API key
+uv run pytest            # 77 test, không gọi API, không cần API key
 ```
 
 Test offline dùng `FakeLLM` (trả JSON kịch bản) cho parser, LLM client (retry/validate), từng agent,
@@ -164,7 +167,7 @@ Chỉ số tổng hợp tính trên TC1–TC5; TC6 và TC7 chấm theo tiêu ch�
 
 ### Kết quả eval mới nhất
 
-**Chưa có.** Eval cần gọi API thật, và môi trường xây dựng MVP chưa có `ANTHROPIC_API_KEY`, nên bước
+**Chưa có.** Eval cần gọi API thật, và môi trường xây dựng MVP chưa có API key, nên bước
 tinh chỉnh prompt theo eval (bước 7) chưa thực hiện. Những gì đã kiểm chứng offline:
 
 - Đáp án của cả 7 ca nhất quán với quy tắc hậu kiểm: một kết quả "hoàn hảo" dựng từ đáp án đi qua
@@ -204,11 +207,14 @@ Theo CLAUDE.md §12, những điểm chưa rõ được giải quyết theo các
 1. **Panel "Trợ lý hỏi đáp" trong mẫu UI được thay bằng khung "Thông tin cuộc họp"** – chatbot/RAG
    nằm ngoài phạm vi MVP; khung này là nơi nhập meta mà mẫu đang thiếu.
 2. `MeetingMeta` có thêm `date`, `start_time`, `end_time`, `project` (tùy chọn) để hiển thị như mẫu.
-3. **Temperature:** Claude Haiku 5.5 / Sonnet 5.5 từ chối tham số `temperature` khác mặc định (lỗi 400),
-   nên `LLMClient` chỉ gửi `LLM_TEMPERATURE` cho model cũ còn hỗ trợ. Độ ổn định dựa vào prompt chặt,
-   schema Pydantic và quy tắc bằng code; đo bằng `--repeat 3`.
-4. Lời gọi tới `claude-sonnet-5-5` bật fallback phía server (`fallbacks: "default"`) để một lần từ chối
-   của bộ lọc an toàn không làm hỏng cả chủ đề. Model từ chối → báo lỗi rõ ràng, chủ đề đó bị bỏ qua kèm cảnh báo.
+3. **Nhà cung cấp LLM:** đặc tả ghi dùng SDK `anthropic`, nhưng dự án dùng key OpenAI nên mặc định là
+   `LLM_PROVIDER=openai` (`OpenAILLM`, Chat Completions ở chế độ JSON `response_format={"type": "json_object"}`).
+   `AnthropicLLM` vẫn giữ nguyên, chuyển qua bằng `LLM_PROVIDER=anthropic`. Logic chung (validate Pydantic,
+   retry 2 lần kèm lỗi, đếm token/chi phí) nằm ở lớp cha `LLMClient`, nên đổi nhà cung cấp không ảnh hưởng agent.
+4. **Temperature:** với OpenAI, `gpt-4.1*`/`gpt-4o*` nhận `temperature=0` và `seed=0`; các model suy luận
+   (`o1`, `o3`, `o4-mini`, `gpt-5*`) chỉ nhận nhiệt độ mặc định nên hai tham số này không được gửi. Với Anthropic,
+   Claude Haiku 5.5 / Sonnet 5.5 cũng từ chối `temperature`. Độ ổn định dựa vào prompt chặt, schema Pydantic và
+   quy tắc bằng code; đo bằng `--repeat 3`. Model từ chối trả lời → báo lỗi rõ ràng, chủ đề đó bị bỏ qua kèm cảnh báo.
 5. Hai prompt bổ sung ngoài 4 file của đặc tả: `segment_merge.md` (gộp chủ đề khi transcript > 300 câu)
    và `match.md` (LLM so khớp có/không trong eval).
 6. **Quy tắc 2:** owner hợp lệ nếu tên xuất hiện trong câu bằng chứng **hoặc** là người nói một câu bằng

@@ -50,3 +50,87 @@ def test_no_sampling_models():
     assert not _NO_SAMPLING_RE.search("claude-haiku-4-5")
     assert not _NO_SAMPLING_RE.search("claude-sonnet-4-6")
 
+
+
+# ---------------------------------------------------------------- OpenAI client (mocked, no network)
+
+from types import SimpleNamespace  # noqa: E402
+
+from meeting_extractor.config import Settings, load_settings  # noqa: E402
+from meeting_extractor.llm import AnthropicLLM, OpenAILLM, make_llm  # noqa: E402
+
+
+def _openai_settings(**kw) -> Settings:
+    base = dict(anthropic_api_key=None, model_light="gpt-4.1-mini", model_strong="gpt-4.1",
+                temperature=0.0, provider="openai", openai_api_key="test-key")
+    base.update(kw)
+    return Settings(**base)
+
+
+class _FakeCompletions:
+    def __init__(self, content: str):
+        self.content = content
+        self.kwargs: list[dict] = []
+
+    def create(self, **kwargs):
+        self.kwargs.append(kwargs)
+        message = SimpleNamespace(content=self.content, refusal=None)
+        return SimpleNamespace(choices=[SimpleNamespace(message=message, finish_reason="stop")],
+                               usage=SimpleNamespace(prompt_tokens=120, completion_tokens=30))
+
+
+def _mocked_openai(content: str, **kw) -> tuple[OpenAILLM, _FakeCompletions]:
+    llm = OpenAILLM(_openai_settings(**kw))
+    fake = _FakeCompletions(content)
+    llm._client = SimpleNamespace(chat=SimpleNamespace(completions=fake))
+    return llm, fake
+
+
+def test_openai_json_mode_and_usage():
+    llm, fake = _mocked_openai('{"passed": true, "reason": "ok"}')
+    out = llm.complete_json(model="gpt-4.1", system="sys JSON", user="u", schema=VerifyOutput, purpose="verify")
+    assert out.passed
+    sent = fake.kwargs[0]
+    assert sent["response_format"] == {"type": "json_object"}
+    assert sent["messages"][0] == {"role": "system", "content": "sys JSON"}
+    assert sent["temperature"] == 0.0 and sent["seed"] == 0
+    assert llm.usage.input_tokens == 120 and llm.usage.output_tokens == 30
+    assert llm.usage.cost_usd() > 0
+
+
+def test_openai_reasoning_models_skip_temperature():
+    llm, fake = _mocked_openai('{"passed": false, "reason": "x"}')
+    llm.complete_json(model="o4-mini", system="s", user="u", schema=VerifyOutput)
+    llm.complete_json(model="gpt-5-mini", system="s", user="u", schema=VerifyOutput)
+    assert all("temperature" not in k and "seed" not in k for k in fake.kwargs)
+
+
+def test_openai_refusal_raises():
+    llm, fake = _mocked_openai("")
+    fake.create = lambda **kw: SimpleNamespace(
+        choices=[SimpleNamespace(message=SimpleNamespace(content=None, refusal="không"), finish_reason="stop")],
+        usage=None)
+    with pytest.raises(LLMError, match="từ chối"):
+        llm.complete_json(model="gpt-4.1", system="s", user="u", schema=VerifyOutput)
+
+
+def test_make_llm_dispatch_and_missing_key():
+    assert isinstance(make_llm(_openai_settings()), OpenAILLM)
+    assert isinstance(make_llm(_openai_settings(provider="anthropic", anthropic_api_key="k")), AnthropicLLM)
+    with pytest.raises(LLMError, match="OPENAI_API_KEY"):
+        make_llm(_openai_settings(openai_api_key=None))
+
+
+def test_load_settings_provider_defaults(tmp_path, monkeypatch):
+    for var in ("LLM_PROVIDER", "MODEL_LIGHT", "MODEL_STRONG", "OPENAI_API_KEY"):
+        monkeypatch.delenv(var, raising=False)
+    empty_env = tmp_path / ".env"
+    empty_env.write_text("", encoding="utf-8")
+    s = load_settings(empty_env)
+    assert (s.provider, s.model_light, s.model_strong) == ("openai", "gpt-4.1-mini", "gpt-4.1")
+    monkeypatch.setenv("LLM_PROVIDER", "anthropic")
+    s = load_settings(empty_env)
+    assert (s.model_light, s.model_strong) == ("claude-haiku-5-5", "claude-sonnet-5-5")
+    monkeypatch.setenv("LLM_PROVIDER", "gemini")
+    with pytest.raises(ValueError):
+        load_settings(empty_env)
