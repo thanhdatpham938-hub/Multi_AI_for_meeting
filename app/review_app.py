@@ -105,7 +105,7 @@ CSS = """
 .stat-num { font-size:1.7rem; font-weight:700; color:var(--ink); line-height:1.2; }
 .stat-sub { color:var(--muted); font-size:.78rem; }
 .badge { display:inline-block; border-radius:999px; padding:.08rem .55rem; font-size:.74rem; font-weight:600;
-  margin:0 .2rem .2rem 0; white-space:normal; line-height:1.35; }
+  margin:0 .2rem .2rem 0; white-space:nowrap; line-height:1.35; }
 .cite { color:var(--brand); font-size:.82rem; }
 .group-head { font-weight:700; color:var(--ink); font-size:1rem; }
 .count-pill { background:#eef2ff; color:#3a4ed8; border-radius:999px; padding:0 .5rem; font-size:.75rem; margin-left:.4rem; }
@@ -122,6 +122,23 @@ CSS = """
   padding:1rem; color:#2443b8; font-size:.85rem; }
 .panel-title { font-weight:700; color:var(--ink); font-size:1.05rem; }
 .muted { color:var(--muted); font-size:.85rem; }
+/* item tables: one bordered grid per group */
+[class*="st-key-tbl-"] { gap:0 !important; border:1px solid var(--line); border-radius:10px; overflow:hidden; background:#fff; }
+[class*="st-key-thead-"] { background:#f4f6fb; }
+[class*="st-key-trow-"] { border-top:1px solid #e4e7ee; }
+[class*="st-key-trow-"]:hover { background:#f8faff; }
+[class*="st-key-thead-"] [data-testid="stHorizontalBlock"],
+[class*="st-key-trow-"] [data-testid="stHorizontalBlock"] { gap:0 !important; align-items:stretch; }
+[class*="st-key-thead-"] [data-testid="stColumn"],
+[class*="st-key-trow-"] [data-testid="stColumn"] { padding:.55rem .5rem; min-width:0; height:auto; }
+[class*="st-key-thead-"] [data-testid="stColumn"] + [data-testid="stColumn"],
+[class*="st-key-trow-"] [data-testid="stColumn"] + [data-testid="stColumn"] { border-left:1px solid var(--line); }
+[class*="st-key-trow-"] [data-testid="stColumn"] > div { height:auto !important; }
+[class*="st-key-tbl-"] [data-testid="stMarkdownContainer"] p { margin-bottom:0; }
+[class*="st-key-trow-"] [data-testid="stColumn"] { padding-bottom:.8rem !important; }
+.th { color:#475467; font-weight:700; font-size:.8rem; white-space:nowrap; }
+[class*="st-key-trow-"] .row-content, [class*="st-key-trow-"] .row-topic { font-size:.86rem; display:block; line-height:1.5; }
+.badge.wrap { white-space:normal; }
 </style>
 """
 st.markdown(CSS, unsafe_allow_html=True)
@@ -130,9 +147,10 @@ st.markdown(CSS, unsafe_allow_html=True)
 # ---------------------------------------------------------------- helpers
 
 
-def badge(text: str, colors: tuple[str, str]) -> str:
+def badge(text: str, colors: tuple[str, str], wrap: bool = False) -> str:
     bg, fg = colors
-    return f'<span class="badge" style="background:{bg};color:{fg}">{html.escape(text)}</span>'
+    cls = "badge wrap" if wrap else "badge"
+    return f'<span class="{cls}" style="background:{bg};color:{fg}">{html.escape(text)}</span>'
 
 
 def status_badge(item: Item) -> str:
@@ -142,7 +160,7 @@ def status_badge(item: Item) -> str:
 
 
 def flag_badges(item: Item) -> str:
-    return "".join(badge(FLAG_LABELS.get(f, f), FLAG_STYLE.get(f, ("#eee", "#333"))) for f in item.flags)
+    return "".join(badge(FLAG_LABELS.get(f, f), FLAG_STYLE.get(f, ("#eee", "#333")), wrap=True) for f in item.flags)
 
 
 def esc(text: Any) -> str:
@@ -433,34 +451,43 @@ def stat_cards(items: list[Item]) -> None:
 
 
 def item_table(run_dir: Path, result: RunResult, items: list[Item], kind: str, prefix: str) -> None:
+    """Grid table: header band, row and column dividers; the last cell opens the detail dialog."""
     is_action = kind == "action"
-    widths = [0.4, 3.2, 1.4, 1.1, 1.1, 1.2, 2.0, 0.6] if is_action else [0.4, 3.8, 1.5, 1.3, 1.4, 2.0, 0.6]
-    heads = (["#", "Nội dung", "Chủ đề", "Phụ trách", "Hạn chót", "Trích dẫn", "Cờ / Duyệt", ""] if is_action
-             else ["#", "Nội dung", "Chủ đề", "Trạng thái", "Trích dẫn", "Cờ / Duyệt", ""])
-    hcols = st.columns(widths)
-    for c, h in zip(hcols, heads):
-        c.markdown(f"<span class='muted'><b>{h}</b></span>", unsafe_allow_html=True)
-    for n, item in enumerate(items, start=1):
-        cols = st.columns(widths, vertical_alignment="center")
-        cls = "row-content rejected" if item.review == "rejected" else "row-content"
-        conf = f"<br><span class='muted'>tin cậy {item.confidence:.0%}</span>"
-        type_tag = "" if kind in ("decision", "action", "open") else f"<span class='muted'>{TYPE_LABEL[item.type]} · </span>"
-        cols[0].markdown(f"<span class='muted'>{n}</span>", unsafe_allow_html=True)
-        cols[1].markdown(f"<div class='{cls}'>{type_tag}{esc(item.content)}{conf}</div>", unsafe_allow_html=True)
-        cols[2].markdown(f"<span class='row-topic'>{esc(item.topic)}</span>", unsafe_allow_html=True)
-        cites = ", ".join(f"#{e}" for e in item.evidence)
-        review = badge(REVIEW_LABELS.get(item.review, item.review), REVIEW_STYLE.get(item.review, ("#eee", "#333")))
-        if is_action:
-            cols[3].markdown(f"<span class='row-content'>{esc(item.owner)}</span>", unsafe_allow_html=True)
-            cols[4].markdown(f"<span class='row-content'>{esc(item.deadline)}</span>", unsafe_allow_html=True)
-            cols[5].markdown(f"<span class='cite'>{cites}</span>", unsafe_allow_html=True)
-            cols[6].markdown(flag_badges(item) + review, unsafe_allow_html=True)
-        else:
-            cols[3].markdown(status_badge(item) or "<span class='muted'>—</span>", unsafe_allow_html=True)
-            cols[4].markdown(f"<span class='cite'>{cites}</span>", unsafe_allow_html=True)
-            cols[5].markdown(flag_badges(item) + review, unsafe_allow_html=True)
-        if cols[-1].button("", icon=":material/chevron_right:", key=f"open-{prefix}-{item.item_id}", help="Xem chi tiết & duyệt"):
-            item_dialog(run_dir, result, item.item_id)
+    if is_action:
+        widths = [0.3, 2.3, 1.1, 0.95, 0.9, 0.95, 1.45, 1.1, 0.45]
+        heads = ["#", "Nội dung", "Chủ đề", "Phụ trách", "Hạn chót", "Trích dẫn", "Cờ", "Duyệt", ""]
+    else:
+        widths = [0.3, 2.5, 1.2, 1.1, 0.95, 1.5, 1.1, 0.45]
+        heads = ["#", "Nội dung", "Chủ đề", "Trạng thái", "Trích dẫn", "Cờ", "Duyệt", ""]
+    with st.container(key=f"tbl-{prefix}"):
+        with st.container(key=f"thead-{prefix}"):
+            for c, h in zip(st.columns(widths, gap="small"), heads):
+                c.markdown(f"<span class='th'>{h}</span>", unsafe_allow_html=True)
+        for n, item in enumerate(items, start=1):
+            with st.container(key=f"trow-{prefix}-{item.item_id}"):
+                cols = st.columns(widths, gap="small")
+                cls = "row-content rejected" if item.review == "rejected" else "row-content"
+                conf = f"<br><span class='muted'>tin cậy {item.confidence:.0%}</span>"
+                type_tag = "" if kind in ("decision", "action", "open") else f"<span class='muted'>{TYPE_LABEL[item.type]} · </span>"
+                cites = "<br>".join(f"#{e}" for e in item.evidence)
+                review = badge(REVIEW_LABELS.get(item.review, item.review), REVIEW_STYLE.get(item.review, ("#eee", "#333")))
+                dash = "<span class='muted'>—</span>"
+                cells = [
+                    f"<span class='muted'>{n}</span>",
+                    f"<div class='{cls}'>{type_tag}{esc(item.content)}{conf}</div>",
+                    f"<span class='row-topic'>{esc(item.topic)}</span>",
+                ]
+                if is_action:
+                    cells += [f"<span class='row-content'>{esc(item.owner)}</span>",
+                              f"<span class='row-content'>{esc(item.deadline)}</span>"]
+                else:
+                    cells.append(status_badge(item) or dash)
+                cells += [f"<span class='cite'>{cites}</span>", flag_badges(item) or dash, review]
+                for col, html_cell in zip(cols, cells):
+                    col.markdown(html_cell, unsafe_allow_html=True)
+                if cols[-1].button("", icon=":material/chevron_right:", key=f"open-{prefix}-{item.item_id}",
+                                   help="Xem chi tiết & duyệt"):
+                    item_dialog(run_dir, result, item.item_id)
 
 
 @st.dialog("Chi tiết mục", width="large")
@@ -541,8 +568,11 @@ def meeting_panel(run_dir: Path, raw: RunResult, result: RunResult, reviews: dic
     if meta and meta.agenda:
         st.markdown("**Chương trình:**  \n" + "  \n".join(f"• {html.escape(a)}" for a in meta.agenda))
     if meta and meta.participants:
-        st.dataframe(pd.DataFrame([{"Tên": p.name, "Vai trò": p.role or "", "Quyền chốt": p.can_decide}
-                                   for p in meta.participants]), hide_index=True, use_container_width=True)
+        st.dataframe(pd.DataFrame([{"Tên": p.name, "Vai trò": p.role or "", "Chốt": p.can_decide}
+                                   for p in meta.participants]), hide_index=True, use_container_width=True,
+                     column_config={"Tên": st.column_config.TextColumn(width=62),
+                                    "Vai trò": st.column_config.TextColumn(width=104),
+                                    "Chốt": st.column_config.CheckboxColumn(width=46, help="Có quyền chốt")})
     else:
         st.caption("Không có danh sách người tham dự – hệ thống không kiểm tra thẩm quyền chốt.")
 
@@ -585,7 +615,7 @@ def page_run() -> None:
     meta = result.meta
     title = (meta.title if meta and meta.title else None) or Path(result.source_file).name
 
-    main, side = st.columns([2.35, 1], gap="large")
+    main, side = st.columns([2.55, 1], gap="large")
     with main:
         st.markdown(f'<div class="crumb">Tất cả cuộc họp › <b>{html.escape(title)}</b></div>'
                     f'<div class="title">{html.escape(title)}</div>', unsafe_allow_html=True)
