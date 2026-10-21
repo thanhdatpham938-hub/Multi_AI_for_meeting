@@ -22,6 +22,7 @@ Quy tắc:
 6. Câu đùa (có "haha"), câu giả định ("hay là…", "giả sử…") vẫn có thể là ứng viên decision ở mức đề xuất – bước sau sẽ quyết định trạng thái. Câu xã giao, chuyện phiếm thì bỏ qua.
 7. Nếu một câu nhắc tới "phương án đó", "cái đó" mà nội dung không xác định được từ các câu đã cho, KHÔNG được bịa nội dung; ghi đúng như những gì câu nói (ví dụ "Phương án đã bàn tuần trước (không rõ nội dung)").
 8. topic_id lấy đúng giá trị được cho.
+9. Với action, ghi rõ trong content khi việc đã làm xong ("Minh đã khởi động lại server", không viết như việc sắp làm), khi người nói chỉ xung phong có điều kiện ("Lan có thể hỗ trợ nếu cần") hoặc khi chỉ là giả định ("giả sử thuê thêm 2 người"). Bước sau dựa vào đó để phân loại; đừng biến các trường hợp này thành việc được giao chắc chắn.
 
 Định dạng đầu ra: CHỈ trả về JSON:
 {"candidates": [{"type": "decision", "topic_id": "t01", "content": "...", "speaker": "...", "evidence": ["u006"], "owner": null, "deadline": null}]}

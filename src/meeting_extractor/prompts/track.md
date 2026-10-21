@@ -44,8 +44,17 @@ Quy tắc chung:
   * evidence_directness: "direct" = câu bằng chứng nói thẳng nội dung/người/hạn của item; "inferred" = phải suy ra từ nhiều câu hoặc ngữ cảnh, câu bằng chứng không tự nói rõ.
   * contradicted_later: true nếu SAU câu bằng chứng cuối còn câu phản bác, đổi ý hoặc thay thế kết luận này; ngược lại false.
   * in_summary: true nếu có câu tóm tắt/nhắc lại kết luận của người chủ trì (hoặc ai đó) trong chủ đề, trước khi chuyển phần khác; ngược lại false.
-- flags chỉ dùng các giá trị: "no_closing_signal". (Các cờ khác do code gắn.)
+- flags chỉ dùng các giá trị: "no_closing_signal", "unresolved_reference". (Các cờ khác do code gắn.) Dùng "unresolved_reference" khi mục dựa vào "phương án đó", "như tuần trước đã bàn", "cái đó"... mà transcript không nói rõ là gì.
 - content viết ngắn gọn bằng tiếng Việt, cụ thể.
+- decision KHÔNG có deadline (deadline luôn null); hạn chót chỉ gắn với action.
+
+Các trường bổ sung (đều có thể null/rỗng nếu không áp dụng):
+* commitment (CHỈ cho action): "assigned" = được giao rõ ("Minh làm tài liệu API, thứ Sáu gửi anh"); "accepted" = người nhận việc đồng ý ("Ok, em sẽ dựng khung"); "volunteered_conditional" = xung phong có điều kiện, chưa cam kết ("Em có thể hỗ trợ nếu cần"); "already_done" = việc đã làm xong ("Em đã khởi động lại server"); "hypothetical" = giả định ("Giả sử mình thuê thêm người…"). Mục không phải action để null.
+* evidence_quotes: object {ID câu: đoạn trích}, với MỖI ID trong evidence. Đoạn trích là phần NGUYÊN VĂN NGẮN NHẤT của câu đó chứng minh mục; chép đúng từng chữ, không sửa chính tả, không diễn đạt lại, không nối từ nhiều chỗ.
+* field_evidence: object chỉ gồm các khóa "owner", "deadline", "condition", mỗi khóa là danh sách ID câu cho thấy giá trị đó. CHỈ ghi khóa khi trường tương ứng khác null.
+* knowledge_scope (CHỈ cho knowledge): "ephemeral" = chỉ có giá trị trong cuộc họp hoặc vài ngày (ví dụ "server staging hôm qua chậm", "Sprint 6 xong 34/38 điểm"); "project" = ràng buộc, số liệu, năng lực, giá dùng suốt dự án nhưng có thể đổi (ví dụ "giải ngân 420/600 triệu"); "reusable" = quy tắc/bài học dùng lại cho dự án khác (ví dụ "giao dịch sandbox VNPay hết hạn sau 15 phút"). Khi mơ hồ: sang tuần sau còn dùng được không? (không: ephemeral); sang dự án khác còn dùng được không? (có: reusable, không: project).
+* pending_on (cho mục deferred/conditional): chuỗi ngắn nói chờ ai/chờ gì (ví dụ "ý kiến của sếp", "khách đồng ý giá mới").
+* follow_up_owner: người theo dõi mục chưa chốt, CHỈ khi transcript nói rõ ("để anh hỏi sếp" → người nói); không có thì null.
 
 Định dạng đầu ra: CHỈ trả về JSON:
 {"items": [
@@ -57,7 +66,15 @@ Quy tắc chung:
      {"status": "confirmed", "content": "Dùng AWS", "reason": null, "evidence": ["u019"]}
    ],
    "owner": null, "deadline": null, "evidence": ["u019"], "closing_signal": "explicit", "evidence_directness": "direct",
-   "contradicted_later": false, "in_summary": false, "flags": []}
+   "contradicted_later": false, "in_summary": false, "flags": [],
+   "commitment": null, "evidence_quotes": {"u019": "mình chốt dùng AWS nhé"}, "field_evidence": {},
+   "knowledge_scope": null, "pending_on": null, "follow_up_owner": null},
+  {"type": "action", "content": "Minh viết tài liệu API", "status": null, "condition": null, "history": [],
+   "owner": "Minh", "deadline": "thứ Sáu này", "evidence": ["u031", "u032"], "closing_signal": null,
+   "evidence_directness": "direct", "contradicted_later": false, "in_summary": false, "flags": [],
+   "commitment": "assigned", "evidence_quotes": {"u031": "Minh làm tài liệu API, thứ Sáu này gửi anh", "u032": "Dạ vâng"},
+   "field_evidence": {"owner": ["u031"], "deadline": ["u031"]},
+   "knowledge_scope": null, "pending_on": null, "follow_up_owner": null}
 ]}
 
 <!-- USER -->

@@ -72,6 +72,8 @@ def _code_terms(item: Item, cited: list[Utterance], meta: MeetingMeta | None, w:
         out["verify_passed"] = w["verify_passed"]
     elif item.verify_passed is False:
         out["verify_failed"] = w["verify_failed"]
+    if "quote_mismatch" in item.flags:
+        out["quote_mismatch"] = w["quote_mismatch"]
     if len(cited) >= 2:
         out["multi_evidence"] = w["multi_evidence"]
     if any(m in u.text.lower() for u in cited for m in NOISE_MARKERS):

@@ -13,7 +13,7 @@ from typing import Any
 from .agents.extractor import extract
 from .agents.segmenter import segment
 from .agents.tracker import TrackResult, candidates_to_items, track_detailed
-from .agents.verifier import needs_verification, verify
+from .agents.verifier import apply_contradiction, needs_verification, verify
 from .audio import save_audio, transcribe_with_warnings
 from .config import PROMPTS_DIR, Settings, load_settings
 from .llm import LLMClient, LLMError, load_prompt, make_llm
@@ -41,8 +41,13 @@ Check = tuple[Item, bool | None, str]
 
 
 def _verify_all(
-    llm: LLMClient, model: str, items: list[Item], utterances: list[Utterance]
+    llm: LLMClient, model: str, items: list[Item], utterances: list[Utterance],
+    warnings: list[str] | None = None,
 ) -> list[Check]:
+    """Verify each item against the FULL transcript; contradicting later utterances are written onto the item.
+
+    Warnings about dropped contradicted_by ids are appended to `warnings` when given.
+    """
     results: list[Check] = []
     for item in items:
         if not needs_verification(item):
@@ -53,7 +58,9 @@ def _verify_all(
         except LLMError as exc:
             results.append((item, None, f"LỖI: {exc}"))
             continue
-        results.append((item, out.passed, out.reason))
+        if warnings is not None:
+            warnings.extend(f"Mục \"{item.content[:60]}\": {w}" for w in out.warnings)
+        results.append((apply_contradiction(item, out), out.passed, out.reason))
     return results
 
 
@@ -147,7 +154,7 @@ def _merge_retry(
                 f"Chủ đề {topic.topic_id} ({topic.title}): bỏ mục làm lại \"{r.content}\" vì trùng mục đã "
                 f"được kiểm chứng \"{dup.content}\"."
             )
-    checks = _verify_all(llm, model, replacements, utterances)
+    checks = _verify_all(llm, model, replacements, utterances, warnings)
     debug["retry_verify"] = _debug_checks(checks)
     errors = _verify_errors(topic, checks)
     warnings += errors
@@ -193,7 +200,8 @@ def process_topic(
     if tracker_failed:
         return TopicResult(items=items, debug=debug, warnings=warnings, failed=True)
 
-    checks = _verify_all(llm, model_strong, items, utterances)
+    warnings = list(warnings)
+    checks = _verify_all(llm, model_strong, items, utterances, warnings)
     debug["verify"] = _debug_checks(checks)
     errors = _verify_errors(topic, checks)
     failures = [c for c in checks if c[1] is False]

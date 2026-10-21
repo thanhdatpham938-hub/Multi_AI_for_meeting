@@ -7,6 +7,12 @@ import re
 from .confidence import apply_cap, closer_status, compute_confidence, load_weights
 from .models import VALID_FLAGS, Item, ItemType, MeetingMeta, Status, Utterance
 from .parsing import base_speaker_name
+from .provenance import (
+    check_quotes,
+    deadline_from_sources,
+    owner_from_sources,
+    sanitize_field_evidence,
+)
 
 LOW_CONFIDENCE = 0.7
 
@@ -29,6 +35,12 @@ NUMBER_RE = re.compile(
     | \bngày\s+\d{1,2}\b | \btháng\s+\d{1,2}\b | \bnăm\s+\d{4}\b          # ngày 15, tháng 11
     """,
     re.IGNORECASE | re.VERBOSE,
+)
+
+
+QUANTITY_RE = re.compile(
+    r"\d[\d.,]*\s*(?:đơn|giờ|phút|giây|người|user|khách|lần|ticket|request|node|server|máy|gb|mb|tb)\b",
+    re.IGNORECASE,
 )
 
 
@@ -64,6 +76,78 @@ def _deadline_supported(deadline: str, evidence: list[Utterance]) -> bool:
     return bool(d) and any(d in _norm(u.text) for u in evidence)
 
 
+def has_quantity(text: str) -> bool:
+    """Money, percent, date or a counted quantity ("5.000 đơn", "24 giờ")."""
+    return has_number(text) or bool(QUANTITY_RE.search(text))
+
+
+def _apply_commitment(item: Item, warnings: list[str]) -> None:
+    """Turn non-commitments into other types; never drop the item silently."""
+    if item.type != ItemType.action:
+        return
+    label = item.commitment
+    if label == "already_done":
+        who = f" (người làm: {item.owner})" if item.owner else ""
+        warnings.append(f"\"{item.content}\": việc đã làm xong, không phải việc cần làm → chuyển thành knowledge{who}")
+        item.type = ItemType.knowledge  # owner is kept
+
+    elif label == "hypothetical":
+        warnings.append(f"\"{item.content}\": giả định, chưa phải việc cần làm → chuyển thành open_issue")
+        item.type = ItemType.open_issue
+    elif label == "volunteered_conditional":
+        who = item.owner
+        warnings.append(
+            f"\"{item.content}\": xung phong có điều kiện, chưa được giao – chuyển thành vấn đề còn mở"
+            + (f" (người xung phong: {who})" if who else "")
+        )
+        if who and who.lower() not in item.content.lower():
+            item.content = f"Đề nghị hỗ trợ (chưa được giao) – {who}: {item.content}"
+        elif who:
+            item.content = f"Đề nghị hỗ trợ (chưa được giao): {item.content}"
+        item.type, item.owner = ItemType.open_issue, None
+
+
+def _drop_decision_deadline(item: Item, warnings: list[str]) -> None:
+    if item.type == ItemType.decision and item.deadline:
+        warnings.append(f"Hạn '{item.deadline}' gắn vào quyết định đã được bỏ: \"{item.content}\"")
+        item.deadline = None
+
+
+def _check_provenance(item: Item, by_id: dict[str, Utterance], warnings: list[str]) -> None:
+    """Verify verbatim quotes and drop field-evidence ids that do not exist."""
+    quotes, mismatched, orphans = check_quotes(item, by_id)
+    if orphans:
+        warnings.append(f"Bỏ đoạn trích của \"{item.content}\": ID {orphans} không nằm trong evidence")
+    item.evidence_quotes = quotes
+    if mismatched:
+        warnings.append(f"\"{item.content}\": đoạn trích không khớp câu gốc ở {mismatched}")
+        _add_flag(item, "quote_mismatch")
+    item.field_evidence, dropped = sanitize_field_evidence(item.field_evidence, by_id)
+    if dropped:
+        warnings.append(f"Bỏ ID nguồn không tồn tại {dropped} khỏi field_evidence của \"{item.content}\"")
+
+
+def _check_owner_deadline(
+    item: Item,
+    evidence: list[Utterance],
+    by_id: dict[str, Utterance],
+    utterances: list[Utterance],
+    meta: MeetingMeta | None,
+    warnings: list[str],
+) -> None:
+    """Rule 2: field_evidence first, then the older check against the cited evidence."""
+    if item.owner:
+        src = [by_id[i] for i in item.field_evidence.get("owner", [])]
+        if not (owner_from_sources(item.owner, src, utterances, meta) or _owner_supported(item.owner, evidence)):
+            warnings.append(f"Bỏ owner \"{item.owner}\" của \"{item.content}\": không có trong câu bằng chứng")
+            item.owner = None
+    if item.deadline:
+        src = [by_id[i] for i in item.field_evidence.get("deadline", [])]
+        if not (deadline_from_sources(item.deadline, src) or _deadline_supported(item.deadline, evidence)):
+            warnings.append(f"Bỏ deadline \"{item.deadline}\" của \"{item.content}\": không có trong câu bằng chứng")
+            item.deadline = None
+
+
 def _score(item: Item, utterances: list[Utterance], meta: MeetingMeta | None) -> None:
     """Formula first, then hard caps (recorded in the breakdown)."""
     w = load_weights()
@@ -90,7 +174,10 @@ def apply_rules(
     for original in items:
         item = original.model_copy(deep=True)
         # low_confidence is recomputed below, so a stale copy must not survive a second run.
-        item.flags = [f for f in dict.fromkeys(item.flags) if f in VALID_FLAGS and f != "low_confidence"]
+        # quote_mismatch is recomputed below for the same reason.
+        item.flags = [
+            f for f in dict.fromkeys(item.flags) if f in VALID_FLAGS and f not in ("low_confidence", "quote_mismatch")
+        ]
 
         # Rule 1: every cited utterance id must exist.
         missing = [eid for eid in _all_evidence_ids(item) if eid not in by_id]
@@ -99,13 +186,13 @@ def apply_rules(
             continue
         evidence = sorted((by_id[e] for e in dict.fromkeys(item.evidence)), key=lambda u: position[u.id])
 
-        # Rule 2: owner/deadline must appear in the evidence.
-        if item.owner and not _owner_supported(item.owner, evidence):
-            warnings.append(f"Bỏ owner \"{item.owner}\" của \"{item.content}\": không có trong câu bằng chứng")
-            item.owner = None
-        if item.deadline and not _deadline_supported(item.deadline, evidence):
-            warnings.append(f"Bỏ deadline \"{item.deadline}\" của \"{item.content}\": không có trong câu bằng chứng")
-            item.deadline = None
+        # Mission 3 rules: commitment labels, decision deadlines, quote provenance.
+        _apply_commitment(item, warnings)
+        _drop_decision_deadline(item, warnings)
+        _check_provenance(item, by_id, warnings)
+
+        # Rule 2: owner/deadline must appear in the evidence (field_evidence first).
+        _check_owner_deadline(item, evidence, by_id, utterances, meta, warnings)
 
         # Rule 3: actions need an owner.
         if item.type == ItemType.action and not item.owner:
@@ -114,6 +201,12 @@ def apply_rules(
         # Rule 4: money / percent / dates must be double-checked by a human.
         if has_number(item.content) or (item.condition and has_number(item.condition)):
             _add_flag(item, "number_check")
+        if item.type == ItemType.action and item.deadline and has_number(item.deadline):
+            _add_flag(item, "number_check")
+
+        # Knowledge about the project that carries a figure may go stale.
+        if item.type == ItemType.knowledge and item.knowledge_scope == "project" and has_quantity(item.content):
+            _add_flag(item, "needs_recheck")
 
         # Rule 5: who closed the decision? (the confidence cap for it is applied in _score)
         if item.type == ItemType.decision and closer_status(evidence[-1].speaker, meta) == "cannot":

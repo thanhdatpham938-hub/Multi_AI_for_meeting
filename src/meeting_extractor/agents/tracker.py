@@ -9,10 +9,23 @@ from typing import Any
 from pydantic import BaseModel, ValidationError
 
 from ..llm import LLMClient, LLMError, load_prompt
-from ..models import CLOSING_SIGNALS, EVIDENCE_DIRECTNESS, Candidate, HistoryEntry, Item, MeetingMeta, Topic, TrackedItem, Utterance
+from ..models import (
+    CLOSING_SIGNALS,
+    COMMITMENTS,
+    EVIDENCE_DIRECTNESS,
+    FIELD_EVIDENCE_KEYS,
+    KNOWLEDGE_SCOPES,
+    Candidate,
+    HistoryEntry,
+    Item,
+    MeetingMeta,
+    Topic,
+    TrackedItem,
+    Utterance,
+)
 from .common import format_participants, format_utterances, select
 
-TRACKER_FLAGS = {"no_closing_signal"}
+TRACKER_FLAGS = {"no_closing_signal", "unresolved_reference"}
 FALLBACK_CONFIDENCE = 0.3
 
 
@@ -105,6 +118,7 @@ def validate_raw_items(raw_items: list[Any], topic: Topic) -> tuple[list[Tracked
             data[key], ok = _coerce_bool(data.get(key))
             if not ok:
                 warnings.append(f"{tag}: nhãn {key} không hợp lệ ({raw.get(key)!r}) → bỏ nhãn này.")
+        warnings.extend(f"{tag}: {w}" for w in clean_new_labels(data))
         data["history"], bad_history = _clean_history(data.get("history"))
         if bad_history:
             warnings.append(f"{tag}: bỏ {bad_history} mục lịch sử không hợp lệ (thiếu/sai trạng thái).")
@@ -130,6 +144,84 @@ def _coerce_bool(value: Any) -> tuple[bool | None, bool]:
     if isinstance(value, str) and value.strip().lower() in ("true", "false"):
         return value.strip().lower() == "true", True
     return None, False
+
+
+def _clean_enum_label(data: dict[str, Any], key: str, allowed: tuple[str, ...]) -> list[str]:
+    value = data.get(key)
+    if value is None:
+        return []
+    if isinstance(value, str) and value.strip() in allowed:
+        data[key] = value.strip()
+        return []
+    data[key] = None
+    return [f"nhãn {key} không hợp lệ ({value!r}) → bỏ nhãn này."]
+
+
+def _clean_text_field(data: dict[str, Any], key: str) -> list[str]:
+    value = data.get(key)
+    if value is None:
+        return []
+    if isinstance(value, str):
+        data[key] = value.strip() or None
+        return []
+    data[key] = None
+    return [f"trường {key} không phải chuỗi ({value!r}) → bỏ."]
+
+
+def _clean_quotes(data: dict[str, Any]) -> list[str]:
+    raw = data.get("evidence_quotes")
+    if raw is None:
+        data["evidence_quotes"] = {}
+        return []
+    if not isinstance(raw, dict):
+        data["evidence_quotes"] = {}
+        return ["evidence_quotes không phải đối tượng → bỏ."]
+    evidence = data.get("evidence")
+    allowed = {e for e in evidence if isinstance(e, str)} if isinstance(evidence, list) else set()
+    kept: dict[str, str] = {}
+    bad = 0
+    for uid, quote in raw.items():
+        if uid in allowed and isinstance(quote, str) and quote.strip():
+            kept[uid] = quote
+        else:
+            bad += 1
+    data["evidence_quotes"] = kept
+    return [f"bỏ {bad} đoạn trích không hợp lệ trong evidence_quotes."] if bad else []
+
+
+def _clean_field_evidence(data: dict[str, Any]) -> list[str]:
+    raw = data.get("field_evidence")
+    if raw is None:
+        data["field_evidence"] = {}
+        return []
+    if not isinstance(raw, dict):
+        data["field_evidence"] = {}
+        return ["field_evidence không phải đối tượng → bỏ."]
+    kept: dict[str, list[str]] = {}
+    bad = 0
+    for key, value in raw.items():
+        if key not in FIELD_EVIDENCE_KEYS:
+            bad += 1
+            continue
+        ids = [value] if isinstance(value, str) else value
+        if isinstance(ids, list) and ids and all(isinstance(i, str) for i in ids):
+            kept[key] = ids
+        else:
+            bad += 1
+    data["field_evidence"] = kept
+    return [f"bỏ {bad} khóa không hợp lệ trong field_evidence."] if bad else []
+
+
+def clean_new_labels(data: dict[str, Any]) -> list[str]:
+    """Sanitise the Mission 3 labels in place so they can never make an item fail validation."""
+    warnings: list[str] = []
+    warnings += _clean_enum_label(data, "commitment", COMMITMENTS)
+    warnings += _clean_enum_label(data, "knowledge_scope", KNOWLEDGE_SCOPES)
+    warnings += _clean_quotes(data)
+    warnings += _clean_field_evidence(data)
+    warnings += _clean_text_field(data, "pending_on")
+    warnings += _clean_text_field(data, "follow_up_owner")
+    return warnings
 
 
 def _clean_history(raw_history: Any) -> tuple[list[dict[str, Any]], int]:
@@ -193,6 +285,12 @@ def build_items(tracked: list[TrackedItem], topic: Topic) -> list[Item]:
                 evidence_directness=_valid_label(t.evidence_directness, EVIDENCE_DIRECTNESS),
                 contradicted_later=t.contradicted_later,
                 in_summary=t.in_summary,
+                commitment=_valid_label(t.commitment, COMMITMENTS),
+                evidence_quotes=t.evidence_quotes,
+                field_evidence=t.field_evidence,
+                knowledge_scope=_valid_label(t.knowledge_scope, KNOWLEDGE_SCOPES),
+                pending_on=t.pending_on,
+                follow_up_owner=t.follow_up_owner,
                 flags=[f for f in t.flags if f in TRACKER_FLAGS],
             )
         )

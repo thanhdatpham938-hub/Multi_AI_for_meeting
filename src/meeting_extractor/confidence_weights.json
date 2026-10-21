@@ -20,6 +20,7 @@
   "contradicted_later": -0.2,
   "noisy_evidence": -0.15,
   "in_summary": 0.1,
+  "quote_mismatch": -0.15,
   "min_score": 0.05,
   "max_score": 0.98,
   "cap_authority": 0.6,
