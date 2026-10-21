@@ -43,6 +43,9 @@ FLAG_LABELS = {
     "low_confidence": "Độ tin cậy thấp",
     "tracker_failed": "Lỗi theo dõi quyết định",
     "conflicting_decision": "Quyết định mâu thuẫn",
+    "unresolved_reference": "Tham chiếu chưa rõ",
+    "needs_recheck": "Cần kiểm tra lại",
+    "quote_mismatch": "Trích dẫn không khớp",
 }
 REVIEW_LABELS = {"pending": "Chờ duyệt", "accepted": "Chấp nhận", "edited": "Đã sửa", "rejected": "Loại"}
 

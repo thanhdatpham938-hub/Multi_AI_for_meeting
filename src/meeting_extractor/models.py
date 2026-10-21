@@ -15,10 +15,17 @@ VALID_FLAGS = (
     "low_confidence",
     "tracker_failed",
     "conflicting_decision",
+    "unresolved_reference",
+    "needs_recheck",
+    "quote_mismatch",
 )
 
 # Discrete labels Agent 3 assigns; code turns them into a confidence score.
 CLOSING_SIGNALS = ("explicit", "implicit", "none")
+# Mission 3 labels (unknown values are coerced to None by code, never drop an item).
+COMMITMENTS = ("assigned", "accepted", "volunteered_conditional", "already_done", "hypothetical")
+KNOWLEDGE_SCOPES = ("ephemeral", "project", "reusable")
+FIELD_EVIDENCE_KEYS = ("owner", "deadline", "condition", "contradicted_by")
 EVIDENCE_DIRECTNESS = ("direct", "inferred")
 
 REVIEW_STATES = ("pending", "accepted", "edited", "rejected")
@@ -113,6 +120,14 @@ class Item(BaseModel):  # final output
     in_summary: bool | None = None
     verify_passed: bool | None = None  # Agent 4 result; None = type not verified
     confidence_breakdown: dict[str, float] = {}  # written by code to explain the score
+    # Mission 3 – all optional so older results still load.
+    commitment: str | None = None  # see COMMITMENTS (actions)
+    evidence_quotes: dict[str, str] = {}  # utterance id -> verbatim quote from that utterance
+    field_evidence: dict[str, list[str]] = {}  # see FIELD_EVIDENCE_KEYS -> source utterance ids
+    knowledge_scope: str | None = None  # see KNOWLEDGE_SCOPES (knowledge items)
+    pending_on: str | None = None  # deferred/conditional: what or whom the item waits for
+    follow_up_owner: str | None = None  # who follows up an unresolved item
+    related_items: list[str] = []  # item_ids of linked items (decision -> actions, blocker -> decision)
 
 
 class RunResult(BaseModel):
@@ -158,6 +173,12 @@ class TrackedItem(BaseModel):
     evidence_directness: str | None = None
     contradicted_later: bool | None = None
     in_summary: bool | None = None
+    commitment: str | None = None
+    evidence_quotes: dict[str, str] = {}
+    field_evidence: dict[str, list[str]] = {}
+    knowledge_scope: str | None = None
+    pending_on: str | None = None
+    follow_up_owner: str | None = None
 
 
 class TrackOutput(BaseModel):

@@ -207,7 +207,15 @@ Sau M4: `pytest`, reviewer soát cả ba, commit. **Không chạy eval ở đây
 > - **Kho tri thức:** tab và sheet Excel riêng cho `knowledge` có `knowledge_scope ∈ {project, reusable}`, cột phạm vi, cờ cần kiểm tra lại, nguồn (cuộc họp, ngày, câu); xuất thêm `knowledge.json`. Mục `ephemeral` chỉ nằm ở danh sách thường.
 > - **Liên kết:** cửa sổ chi tiết hiện `related_items` dạng link mở mục liên quan.
 >
-> File được phép: `app/review_app.py`, `export.py`, test mới `tests/test_m5b_ui.py`.
+> - **Sửa tồn đọng từ soát pha 4** (reviewer 21/10, không chặn):
+>   - N1: nhãn `closer_unknown` → "người chốt không có quyền hoặc chưa xác định" (khóa này gồm cả người có `can_decide=false`).
+>   - N2: thống nhất hiển thị độ tin cậy một kiểu (0,72) ở bảng, dialog và chú thích Duyệt nhanh.
+>   - N3: kiểm `upload.size` trước khi ghi file audio ra đĩa; không ghi lại file ở mỗi lần rerun.
+>   - N4: test `test_audio_path_cannot_escape_run_folder` tạo file thật ở `run_dir/` và ngoài `run_dir/` để chứng minh `..` bị cắt.
+>   - N5: test riêng cho `make_llm` ném `LLMError` (thiếu key) ở tab Hỏi đáp.
+>   - N6: `analyze_with` bắt thêm `OSError` khi lưu audio, hiện lỗi tiếng Việt.
+>
+> File được phép: `app/review_app.py`, `export.py`, `tests/test_phase4_ui.py`, test mới `tests/test_m5b_ui.py`.
 
 Sau M5: `pytest`, reviewer soát, kiểm tra giao diện bằng ảnh chụp, commit.
 
