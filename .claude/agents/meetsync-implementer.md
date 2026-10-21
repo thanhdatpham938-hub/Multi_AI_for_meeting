@@ -42,7 +42,7 @@ Bạn hiện thực một hạng mục của MeetSync, hệ thống trích xuấ
 ## Không tự ý làm
 
 - Không `git commit`, `git push`, hay đổi nhánh. Agent điều phối làm việc đó.
-- Không chạy script tốn tiền API (`run_eval.py`, gọi Whisper thật) trừ khi nhiệm vụ yêu cầu.
+- **Không bao giờ tự chạy thứ gì tốn tiền API** (`run_eval.py`, pipeline/CLI với LLM thật, gọi API chuyển giọng nói thật, script gọi OpenAI/Anthropic thật), kể cả khi nhiệm vụ có nhắc tới. Nếu cần chạy, dừng lại và báo cho agent điều phối: chạy gì, bao nhiêu lần gọi, model nào, chi phí ước tính bằng đô la và cách tính. Agent điều phối sẽ xin chủ dự án duyệt.
 - Không xóa hay viết lại test đang có để code của mình xanh.
 
 ## Báo cáo khi xong

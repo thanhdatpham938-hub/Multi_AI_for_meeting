@@ -23,6 +23,7 @@ MVP đã chạy được toàn bộ luồng, 83 test offline đạt. Giai đoạ
 - **Không sửa file ngoài danh sách được giao.** Nếu thấy cần, báo lại cho agent điều phối, không tự sửa.
 - **Chạy `pytest` trước khi báo xong.** Test đỏ thì sửa, không bàn giao code hỏng.
 - **Không gọi API thật trong test.** Dùng `FakeLLM` như các test hiện có.
+- **Chạy bất cứ thứ gì tốn tiền API phải báo giá và xin duyệt trước.** Gồm: `eval/run_eval.py`, pipeline/CLI/giao diện với LLM thật, API chuyển giọng nói thật, và mọi script gọi OpenAI/Anthropic thật. Trước khi chạy, agent điều phối phải báo cho chủ dự án: chạy gì, bao nhiêu lần gọi, model nào, **chi phí ước tính bằng đô la** và cách tính (mốc tham khảo: một lần chạy TC1 21 câu ≈ $0,015; cuộc họp 140 câu ≈ $0,36; eval 7 ca × 3 lần ≈ $0,3–0,6), rồi **chờ chủ dự án duyệt rõ ràng** mới chạy. Duyệt một lần chỉ áp dụng cho đúng lần chạy đó. Subagent không bao giờ tự chạy, cần thì báo lại agent điều phối.
 - **Prompt nằm trong `src/meeting_extractor/prompts/*.md`**, không viết cứng trong code.
 - **Không commit `.env`, API key, hay thư mục `runs/`.**
 - Code, tên biến, comment bằng tiếng Anh. Prompt và chữ hiển thị cho người dùng bằng tiếng Việt.
@@ -142,7 +143,7 @@ python eval/run_eval.py --repeat 3
 
 Lưu kết quả vào `eval/baseline_2026-10-21.md`: sáu chỉ số, token, chi phí. **Đây là mốc so sánh cho mọi thay đổi sau đó.** Chưa có số này thì không sửa prompt.
 
-Nếu `run_eval.py` lỗi, sửa cho chạy được rồi mới đi tiếp. Chi phí dự kiến dưới 1 đô cho 7 ca ngắn × 3 lần (một lần chạy TC1 thật hết ~$0,015).
+Nếu `run_eval.py` lỗi, sửa cho chạy được rồi mới đi tiếp. Chi phí dự kiến dưới 1 đô cho 7 ca ngắn × 3 lần (một lần chạy TC1 thật hết ~$0,015) – **báo giá và xin duyệt trước khi chạy** (mục 2). Áp dụng tương tự cho eval cuối ở pha 5B.
 
 Lưu ý: eval chỉ chấm 7 ca ngắn trong `tests/fixtures/`. Năm cuộc họp dài có đáp án dạng văn bản nên chưa chấm tự động được.
 
@@ -309,4 +310,5 @@ Cắt từ trên xuống:
 | 7 | Giữ trần cứng sau công thức, rồi mới gắn `low_confidence` | Công thức cho TC5 ra 0,65 > 0,6 (trượt đáp án); điểm 0,3 của `tracker_failed` bị công thức ghi đè |
 | 8 | 3B: model tách người nói, `run_audio`, nhãn "Speaker A"; file > 25MB bị từ chối, không cắt khúc | `whisper-1` không tách người nói; giao diện truyền file tải lên chứ không phải đường dẫn; regex "Speaker N" chỉ nhận số; cắt khúc cần ffmpeg và làm lệch nhãn người nói giữa các khúc |
 | 9 | 5A gộp chủ đề bằng 1 lần gọi, dùng lại `segment_merge.md` | So đôi một là O(n²) lần gọi |
+| 11 | Thêm quy tắc báo giá và xin duyệt trước mọi lần chạy tốn tiền API (mục 2, định nghĩa 2 subagent) | Yêu cầu của chủ dự án 21/10 |
 | 10 | L1 ghi `failed_topics` cả khi Agent 2/4 lỗi; QA nhận kết quả đã áp duyệt; mỗi subagent dùng file test riêng; pha 0 đưa kế hoạch vào repo | Tránh mất dữ liệu ở bước khác, tránh xung đột file khi song song, để subagent đọc được kế hoạch |

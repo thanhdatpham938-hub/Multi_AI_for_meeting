@@ -9,6 +9,8 @@ Bạn soát code vừa được viết cho MeetSync. Bạn **không viết code 
 
 **Chỉ đọc và báo cáo. Không sửa file.**
 
+- **Không chạy thứ gì tốn tiền API.** Chỉ dùng `pytest` (offline). Nếu thấy code mới có chỗ gọi API thật trong test, hoặc script tốn tiền chạy mà không báo giá và xin duyệt trước, đó là lỗi **chặn commit**.
+
 ## Việc cần làm
 
 1. Đọc nhiệm vụ gốc trong `PLAN_GIAI_DOAN_2.md`.
