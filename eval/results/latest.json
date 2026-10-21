@@ -1,0 +1,193 @@
+{
+  "metrics": {
+    "false_confirm_rate": 0.0,
+    "decision_recall": 1.0,
+    "action_precision": 0.6,
+    "citation_accuracy": 1.0,
+    "fabricated_fields": 1.0,
+    "stability_change_rate": 0.0
+  },
+  "cases": {
+    "TC1": {
+      "passed": true,
+      "errors": [],
+      "counts": {
+        "confirmed_total": 1,
+        "confirmed_wrong": 0,
+        "exp_decisions": 1,
+        "exp_decisions_matched": 1,
+        "actions_total": 0,
+        "actions_matched": 0,
+        "matched_total": 1,
+        "matched_cited": 1,
+        "fabricated": 0
+      }
+    },
+    "TC2": {
+      "passed": false,
+      "errors": [
+        "Bỏ sót action: \"Xem lại phần test tải\""
+      ],
+      "counts": {
+        "confirmed_total": 0,
+        "confirmed_wrong": 0,
+        "exp_decisions": 0,
+        "exp_decisions_matched": 0,
+        "actions_total": 1,
+        "actions_matched": 1,
+        "matched_total": 1,
+        "matched_cited": 1,
+        "fabricated": 0
+      }
+    },
+    "TC3": {
+      "passed": false,
+      "errors": [
+        "Lịch sử thiếu \"Ra mắt beta ngày 1/11\" superseded trong \"Ra mắt bản beta ngày 15/11\"",
+        "Action thừa: [a01] \"Nam hỗ trợ phỏng vấn vòng kỹ thuật nếu cần\" owner=Nam",
+        "Action thừa: [a02] \"Khởi động lại server staging\" owner=Minh"
+      ],
+      "counts": {
+        "confirmed_total": 1,
+        "confirmed_wrong": 0,
+        "exp_decisions": 1,
+        "exp_decisions_matched": 1,
+        "actions_total": 3,
+        "actions_matched": 1,
+        "matched_total": 3,
+        "matched_cited": 3,
+        "fabricated": 0
+      }
+    },
+    "TC4": {
+      "passed": true,
+      "errors": [],
+      "counts": {
+        "confirmed_total": 0,
+        "confirmed_wrong": 0,
+        "exp_decisions": 2,
+        "exp_decisions_matched": 2,
+        "actions_total": 0,
+        "actions_matched": 0,
+        "matched_total": 2,
+        "matched_cited": 2,
+        "fabricated": 0
+      }
+    },
+    "TC5": {
+      "passed": false,
+      "errors": [
+        "deadline bịa: \"Tuần sau chốt dùng React cho front-end\" deadline='tuần sau'"
+      ],
+      "counts": {
+        "confirmed_total": 0,
+        "confirmed_wrong": 0,
+        "exp_decisions": 1,
+        "exp_decisions_matched": 1,
+        "actions_total": 1,
+        "actions_matched": 1,
+        "matched_total": 2,
+        "matched_cited": 2,
+        "fabricated": 1
+      }
+    },
+    "TC6": {
+      "passed": true,
+      "errors": [],
+      "counts": {
+        "confirmed_total": 1,
+        "confirmed_wrong": 0,
+        "exp_decisions": 1,
+        "exp_decisions_matched": 1,
+        "actions_total": 0,
+        "actions_matched": 0,
+        "matched_total": 1,
+        "matched_cited": 1,
+        "fabricated": 0
+      }
+    },
+    "TC7": {
+      "passed": false,
+      "errors": [
+        "Action thừa: [a02] \"Báo bên toà nhà về máy lạnh hỏng\" owner=Lan"
+      ],
+      "counts": {
+        "confirmed_total": 0,
+        "confirmed_wrong": 0,
+        "exp_decisions": 0,
+        "exp_decisions_matched": 0,
+        "actions_total": 2,
+        "actions_matched": 1,
+        "matched_total": 1,
+        "matched_cited": 1,
+        "fabricated": 0
+      }
+    }
+  },
+  "usage": {
+    "calls": 213,
+    "input_tokens": 242516,
+    "output_tokens": 36909,
+    "by_model": {
+      "gpt-4.1-mini": [
+        81573,
+        15712
+      ],
+      "gpt-4.1": [
+        160943,
+        21197
+      ]
+    },
+    "cost_usd_estimate": 0.54923
+  },
+  "models": [
+    "gpt-4.1-mini",
+    "gpt-4.1"
+  ],
+  "prompt_versions": {
+    "extract": "832f10c026a9",
+    "match": "0f7a5ce2b7f7",
+    "segment": "077ef404bb9a",
+    "segment_merge": "fc4e42d52e6b",
+    "track": "75f74dd235f1",
+    "verify": "00aaed9cc073"
+  },
+  "run_ids": {
+    "TC1": [
+      "20261021-112357-329548_tc1",
+      "20261021-112411-118922_tc1",
+      "20261021-112423-588883_tc1"
+    ],
+    "TC2": [
+      "20261021-112435-773606_tc2",
+      "20261021-112440-766409_tc2",
+      "20261021-112447-147427_tc2"
+    ],
+    "TC3": [
+      "20261021-112453-688895_tc3",
+      "20261021-112516-867012_tc3",
+      "20261021-112541-730765_tc3"
+    ],
+    "TC4": [
+      "20261021-112609-187695_tc4",
+      "20261021-112631-818981_tc4",
+      "20261021-112653-551967_tc4"
+    ],
+    "TC5": [
+      "20261021-112716-190491_tc5",
+      "20261021-112723-974449_tc5",
+      "20261021-112731-544374_tc5"
+    ],
+    "TC6": [
+      "20261021-112739-182272_tc6",
+      "20261021-112755-765334_tc6",
+      "20261021-112810-701028_tc6"
+    ],
+    "TC7": [
+      "20261021-112827-222796_tc7",
+      "20261021-112858-858079_tc7",
+      "20261021-112929-809100_tc7"
+    ]
+  },
+  "repeat": 3
+}
