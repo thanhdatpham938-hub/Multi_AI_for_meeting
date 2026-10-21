@@ -87,6 +87,7 @@ Người tham dự:
 {{UTTERANCES}}
 </transcript>
 
+{{DIGEST}}
 Ứng viên từ Agent 2:
 {{CANDIDATES}}
 {{FEEDBACK}}

@@ -11,7 +11,9 @@ from pathlib import Path
 from typing import Any
 
 from .agents.extractor import extract
-from .agents.segmenter import segment
+from .agents.digest import build_digest
+from .agents.reconciler import reconcile
+from .agents.segmenter import merge_topics, segment
 from .agents.tracker import TrackResult, candidates_to_items, track_detailed
 from .agents.verifier import apply_contradiction, needs_verification, verify
 from .audio import save_audio, transcribe_with_warnings
@@ -19,6 +21,7 @@ from .config import PROMPTS_DIR, Settings, load_settings
 from .llm import LLMClient, LLMError, load_prompt, make_llm
 from .models import Item, MeetingMeta, RunResult, Topic, Utterance
 from .parsing import parse_file, parse_text
+from .conflicts import flag_conflicts
 from .rules import apply_rules
 
 ProgressFn = Callable[[str, float], None]
@@ -96,13 +99,14 @@ def _finalize(checks: list[Check], flag_failures: bool) -> list[Item]:
 def _track_or_fallback(
     llm: LLMClient, model: str, topic: Topic, candidates: list[Candidate],
     utterances: list[Utterance], meta: MeetingMeta | None, feedback: str | None = None,
+    digest: str = "",
 ) -> tuple[list[Item], list[str], bool, bool]:
     """Run Agent 3; on total failure keep Agent 2's candidates.
 
     Returns (items, warnings, tracker_failed, dropped_any_item).
     """
     try:
-        res = track_detailed(llm, model, topic, candidates, utterances, meta, feedback)
+        res = track_detailed(llm, model, topic, candidates, utterances, meta, feedback, digest)
     except LLMError as exc:
         warn = f"Chủ đề {topic.topic_id} ({topic.title}): Agent 3 lỗi, giữ kết quả thô của Agent 2. {exc}"
         return candidates_to_items(candidates, topic), [warn], True, False
@@ -181,6 +185,7 @@ def process_topic(
     topic: Topic,
     utterances: list[Utterance],
     meta: MeetingMeta | None = None,
+    digest: str = "",
 ) -> TopicResult:
     """Agent 2 → Agent 3 → Agent 4, with exactly one redo of Agent 2+3 on verify failure.
 
@@ -194,7 +199,7 @@ def process_topic(
         return TopicResult(items=[], debug={"error": str(exc)}, warnings=[warn], failed=True)
     debug["extract"] = [c.model_dump(mode="json") for c in candidates]
     items, warnings, tracker_failed, dropped = _track_or_fallback(
-        llm, model_strong, topic, candidates, utterances, meta
+        llm, model_strong, topic, candidates, utterances, meta, digest=digest
     )
     debug["track"] = [i.model_dump(mode="json") for i in items]
     if tracker_failed:
@@ -214,7 +219,8 @@ def process_topic(
     try:
         candidates = extract(llm, model_light, topic, utterances, meta, feedback=feedback)
         debug["retry_extract"] = [c.model_dump(mode="json") for c in candidates]
-        retry = track_detailed(llm, model_strong, topic, candidates, utterances, meta, feedback=feedback)
+        retry = track_detailed(llm, model_strong, topic, candidates, utterances, meta, feedback=feedback,
+                                digest=digest)
     except LLMError as exc:
         # Redo failed: keep the first-pass items, flagging the ones that did not pass.
         warn = f"Chủ đề {topic.topic_id} ({topic.title}): lỗi khi làm lại sau kiểm chứng, giữ kết quả lần đầu. {exc}"
@@ -241,6 +247,64 @@ def new_run_id(source_name: str) -> str:
 def _write_json(path: Path, data: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _merge_step(
+    llm: LLMClient, settings: Settings, topics: list[Topic], utterances: list[Utterance],
+    meta: MeetingMeta | None, seg_debug: dict[str, Any], warnings: list[str], notify: ProgressFn,
+    run_dir: Path | None,
+) -> list[Topic]:
+    """L3: one merge call over all topics. Failure keeps the unmerged topics (warning only)."""
+    if "merge" in seg_debug:  # long transcripts were already merged inside segment()
+        return topics
+    notify("Agent 1 – Gộp chủ đề trùng", 0.07)
+    try:
+        merged, debug = merge_topics(llm, settings.model_light, topics, utterances, meta)
+    except LLMError as exc:
+        warnings.append(f"Gộp chủ đề lỗi, giữ các chủ đề chưa gộp. {exc}")
+        return topics
+    if run_dir is not None:
+        _write_json(run_dir / "segment.json", {"topics": [t.model_dump() for t in merged],
+                                               "debug": {**seg_debug, "merge": debug}})
+    return merged
+
+
+def _digest_step(
+    llm: LLMClient, settings: Settings, utterances: list[Utterance], warnings: list[str],
+    notify: ProgressFn, run_dir: Path | None,
+) -> str:
+    """One digest call per meeting. Failure -> run on without an outline (warning only)."""
+    notify("Dàn ý dòng thời gian", 0.09)
+    try:
+        text, debug = build_digest(llm, settings.model_light, utterances)
+    except LLMError as exc:
+        warnings.append(f"Lập dàn ý lỗi, chạy tiếp không có dàn ý. {exc}")
+        return ""
+    if run_dir is not None:
+        _write_json(run_dir / "digest.json", {"text": text, **debug})
+    return text
+
+
+def _reconcile_step(
+    llm: LLMClient, settings: Settings, items: list[Item], utterances: list[Utterance],
+    meta: MeetingMeta | None, warnings: list[str], notify: ProgressFn, run_dir: Path | None,
+) -> list[Item]:
+    """Reconcile (AI links/conflicts), then code conflict flags, then re-run rules so flags reach scoring/sorting.
+
+    apply_rules is idempotent and keeps item ids stable, so related_items stay valid.
+    """
+    notify("Đối soát toàn cuộc họp", 0.95)
+    try:
+        rec_warnings, debug = reconcile(llm, settings.model_strong, items, utterances)
+        warnings.extend(rec_warnings)
+        if run_dir is not None:
+            _write_json(run_dir / "reconcile.json", debug)
+    except LLMError as exc:
+        warnings.append(f"Đối soát lỗi, bỏ qua bước này. {exc}")
+    flag_conflicts(items)
+    items, again = apply_rules(items, utterances, meta)
+    warnings.extend(w for w in again if w not in warnings)
+    return items
 
 
 def run_utterances(
@@ -271,12 +335,15 @@ def run_utterances(
     if save:
         _write_json(run_dir / "segment.json", {"topics": [t.model_dump() for t in topics], "debug": seg_debug})
 
+    topics = _merge_step(llm, settings, topics, utterances, meta, seg_debug, warnings, notify, run_dir if save else None)
+    digest = _digest_step(llm, settings, utterances, warnings, notify, run_dir if save else None)
+
     items: list[Item] = []
     failed_topics: list[str] = []
     for i, topic in enumerate(topics, start=1):
         notify(f"Agent 2–4 – Chủ đề {i}/{len(topics)}: {topic.title}", 0.1 + 0.8 * (i - 1) / max(len(topics), 1))
         try:
-            result = process_topic(llm, settings.model_light, settings.model_strong, topic, utterances, meta)
+            result = process_topic(llm, settings.model_light, settings.model_strong, topic, utterances, meta, digest)
         except LLMError as exc:  # safety net: process_topic handles agent errors itself
             warnings.append(f"Chủ đề {topic.topic_id} ({topic.title}) lỗi khi gọi LLM: {exc}")
             failed_topics.append(topic.topic_id)
@@ -291,6 +358,7 @@ def run_utterances(
     notify("Quy tắc hậu kiểm", 0.92)
     items, rule_warnings = apply_rules(items, utterances, meta)
     warnings.extend(rule_warnings)
+    items = _reconcile_step(llm, settings, items, utterances, meta, warnings, notify, run_dir if save else None)
 
     result = RunResult(
         run_id=run_id,

@@ -24,15 +24,25 @@ sys.path.insert(0, str(ROOT / "src"))
 from meeting_extractor.audio import check_audio_file, clip_range, format_time  # noqa: E402
 from meeting_extractor.config import load_settings  # noqa: E402
 from meeting_extractor.export import (  # noqa: E402
+    COMMITMENT_LABELS,
     FLAG_LABELS,
     REVIEW_LABELS,
+    SCOPE_LABELS,
     STATUS_LABELS,
+    answer_edits,
     apply_reviews,
+    clarification_items,
+    highlight_quote_html,
+    knowledge_entries,
+    knowledge_to_json,
     load_reviews,
+    related_summaries,
     save_reviews,
     to_excel,
     to_json,
+    utterance_context,
 )
+from meeting_extractor import audio as _audio  # noqa: E402
 from meeting_extractor.llm import LLMError, make_llm  # noqa: E402
 from meeting_extractor.models import Item, ItemType, MeetingMeta, Participant, RunResult, Status  # noqa: E402
 from meeting_extractor.parsing import is_anonymous_speaker, parse_text  # noqa: E402
@@ -147,6 +157,9 @@ CSS = """
 .th { color:#475467; font-weight:700; font-size:.8rem; white-space:nowrap; }
 [class*="st-key-trow-"] .row-content, [class*="st-key-trow-"] .row-topic { font-size:.86rem; display:block; line-height:1.5; }
 .badge.wrap { white-space:normal; }
+.quote.ctx { border-left-color:#d0d5dd; background:#fafafa; color:#98a2b3; font-size:.85rem; padding:.25rem .8rem; }
+.quote.ctx small { color:#98a2b3; }
+.warn-small { color:#b45f06; font-size:.78rem; }
 </style>
 """
 st.markdown(CSS, unsafe_allow_html=True)
@@ -241,7 +254,7 @@ POS_COLOR, NEG_COLOR, CAP_COLOR = "#1e7b3c", "#b42318", "#b45f06"
 TERM_LABELS = {
     "closing_explicit": "câu chốt rõ", "closing_implicit": "câu chốt ngầm", "closing_none": "không có câu chốt",
     "evidence_inferred": "bằng chứng suy luận", "closer_can_decide": "người chốt có quyền",
-    "closer_unknown": "chưa rõ quyền người chốt", "verify_passed": "kiểm chứng đạt",
+    "closer_unknown": "người chốt không có quyền hoặc chưa xác định", "verify_passed": "kiểm chứng đạt",
     "verify_failed": "kiểm chứng không đạt", "multi_evidence": "nhiều câu bằng chứng",
     "contradicted_later": "bị phản bác sau đó", "noisy_evidence": "ghi âm không rõ",
     "in_summary": "được nhắc trong câu tóm lại",
@@ -492,22 +505,36 @@ def page_new() -> None:
 
 def audio_section(upload: Any, meta: MeetingMeta | None) -> None:
     """Audio upload: validate size/format locally (no API call), then speech-to-text + pipeline."""
+    problem = audio_upload_problem(upload.size)  # size is known before anything touches the disk
+    if problem:
+        st.error(problem)
+        st.button("🔍  Phân tích", type="primary", disabled=True, use_container_width=True)
+        return
+    st.success(f"Nhận file ghi âm {upload.name} ({upload.size / 1024 / 1024:.1f} MB).")
+    st.caption("Hệ thống sẽ chuyển giọng nói thành văn bản (có tách người nói) rồi phân tích như transcript. "
+               "Chi phí chuyển giọng nói tính theo thời lượng ghi âm.")
+    if st.button("🔍  Phân tích", type="primary", use_container_width=True):
+        analyze_with(lambda progress: _run_audio_upload(upload, meta, progress))
+
+
+def audio_upload_problem(size: int) -> str | None:
+    """Vietnamese error when the upload is too large (checked from upload.size, before writing to disk)."""
+    limit = _audio.MAX_AUDIO_BYTES
+    if size > limit:
+        return (f"File audio quá lớn: {size / 1024 / 1024:.1f} MB (giới hạn {limit // 1024 // 1024} MB). "
+                "Hãy nén sang mp3 bitrate thấp (ví dụ 32–64 kbps, mono) hoặc cắt ngắn file rồi thử lại.")
+    return None
+
+
+def _run_audio_upload(upload: Any, meta: MeetingMeta | None, progress: Callable[[str, float], None]) -> RunResult:
+    """Write the upload to a temp file only when the user clicks Analyze; always clean up."""
     stem = re.sub(r"[^\w\-]+", "_", Path(upload.name).stem, flags=re.ASCII)[:40].strip("_") or "audio"
     tmp_dir = Path(tempfile.mkdtemp(prefix="meetsync_"))
-    path = tmp_dir / f"{stem}{Path(upload.name).suffix.lower()}"
     try:
+        path = tmp_dir / f"{stem}{Path(upload.name).suffix.lower()}"
         path.write_bytes(upload.getvalue())
-        try:
-            size = check_audio_file(path)
-        except (ValueError, FileNotFoundError) as exc:
-            st.error(str(exc))
-            st.button("🔍  Phân tích", type="primary", disabled=True, use_container_width=True)
-            return
-        st.success(f"Nhận file ghi âm {upload.name} ({size / 1024 / 1024:.1f} MB).")
-        st.caption("Hệ thống sẽ chuyển giọng nói thành văn bản (có tách người nói) rồi phân tích như transcript. "
-                   "Chi phí chuyển giọng nói tính theo thời lượng ghi âm.")
-        if st.button("🔍  Phân tích", type="primary", use_container_width=True):
-            analyze_with(lambda progress: _pipeline.run_audio(path, meta, settings=SETTINGS, progress=progress))
+        check_audio_file(path)
+        return _pipeline.run_audio(path, meta, settings=SETTINGS, progress=progress)
     finally:
         shutil.rmtree(tmp_dir, ignore_errors=True)
 
@@ -532,6 +559,9 @@ def analyze_with(runner: Callable[[Callable[[str, float], None]], RunResult]) ->
         except (ValueError, FileNotFoundError) as exc:
             status.update(label="Đầu vào không hợp lệ", state="error")
             error = str(exc)
+        except OSError as exc:
+            status.update(label="Lỗi ghi file", state="error")
+            error = f"Không ghi được file ghi âm tạm hoặc file kết quả: {exc}. Kiểm tra dung lượng ổ đĩa và quyền ghi."
         else:
             status.update(label=f"Hoàn tất – {len(result.items)} mục", state="complete")
     if error:
@@ -611,7 +641,7 @@ def item_table(run_dir: Path, result: RunResult, items: list[Item], kind: str, p
             with st.container(key=f"trow-{prefix}-{item.item_id}"):
                 cols = st.columns(widths, gap="small")
                 cls = "row-content rejected" if item.review == "rejected" else "row-content"
-                conf = f"<br><span class='muted'>tin cậy {item.confidence:.0%}</span>"
+                conf = f"<br><span class='muted'>tin cậy {fmt_num(item.confidence)}</span>{row_extras(item)}"
                 type_tag = "" if kind in ("decision", "action", "open") else f"<span class='muted'>{TYPE_LABEL[item.type]} · </span>"
                 cites = "<br>".join(f"#{e}" for e in item.evidence)
                 review = badge(REVIEW_LABELS.get(item.review, item.review), REVIEW_STYLE.get(item.review, ("#eee", "#333")))
@@ -634,6 +664,96 @@ def item_table(run_dir: Path, result: RunResult, items: list[Item], kind: str, p
                     item_dialog(run_dir, result, item.item_id)
 
 
+def row_extras(item: Item) -> str:
+    """Small extra lines under the content cell: commitment label, what an unresolved item waits for."""
+    lines: list[str] = []
+    if item.commitment in COMMITMENT_LABELS:
+        lines.append(f"Cam kết: {COMMITMENT_LABELS[item.commitment]}")
+    if item.status in (Status.open, Status.deferred, Status.conditional):
+        if item.pending_on:
+            lines.append(f"Đang chờ: {item.pending_on}")
+        if item.follow_up_owner:
+            lines.append(f"Theo dõi: {item.follow_up_owner}")
+    return "".join(f"<br><span class='muted'>{html.escape(x)}</span>" for x in lines)
+
+
+def _utt_line(u: Any, cls: str, body_html: str) -> str:
+    return (f"<div class='quote{cls}'><small>{html.escape(u.id)} · {html.escape(u.time)} · "
+            f"<b>{html.escape(u.speaker)}</b></small><br>{body_html}</div>")
+
+
+def evidence_html(item: Item, result: RunResult, uid: str, context: int = 2) -> str | None:
+    """One evidence utterance: quote in bold, +-`context` neighbours dimmed. None when the id is unknown."""
+    by_id = {u.id: u for u in result.utterances}
+    u = by_id.get(uid)
+    if u is None:
+        return None
+    before, after = utterance_context(result.utterances, uid, context)
+    body, found = highlight_quote_html(u.text, item.evidence_quotes.get(uid))
+    if found is False:
+        body += "<br><span class='warn-small'>Không tìm thấy đoạn trích trong câu này.</span>"
+    parts = [_utt_line(c, " ctx", html.escape(c.text)) for c in before]
+    parts.append(_utt_line(u, "", body))
+    parts += [_utt_line(c, " ctx", html.escape(c.text)) for c in after]
+    return "".join(parts)
+
+
+FIELD_SOURCE_LABELS = (("owner", "Phụ trách"), ("deadline", "Hạn chót"), ("condition", "Điều kiện"))
+
+
+def field_sources_html(item: Item, result: RunResult) -> str:
+    """Per-field source sentences (owner / deadline / condition); empty string when none recorded."""
+    by_id = {u.id: u for u in result.utterances}
+    rows: list[str] = []
+    for key, label in FIELD_SOURCE_LABELS:
+        for uid in item.field_evidence.get(key, []):
+            u = by_id.get(uid)
+            if u:
+                rows.append(f"<small><b>{label}</b> ← {html.escape(u.id)} · {html.escape(u.time)} "
+                            f"{html.escape(u.speaker)}: “{html.escape(u.text)}”</small>")
+    return "<br>".join(rows)
+
+
+def contradicted_html(item: Item, result: RunResult) -> str:
+    by_id = {u.id: u for u in result.utterances}
+    rows = [f"<small>{html.escape(u.id)} · {html.escape(u.time)} <b>{html.escape(u.speaker)}</b>: "
+            f"“{html.escape(u.text)}”</small>"
+            for u in (by_id.get(e) for e in item.field_evidence.get("contradicted_by", [])) if u]
+    return "<br>".join(rows)
+
+
+def render_evidence(item: Item, result: RunResult) -> None:
+    st.markdown("**Trích dẫn nguyên văn**")
+    if "quote_mismatch" in item.flags:
+        st.warning("Đoạn trích AI đưa ra không khớp nguyên văn câu gốc. Hãy tự đối chiếu với câu gốc trước khi chấp nhận.")
+    shown = False
+    for e in item.evidence:
+        block = evidence_html(item, result, e)
+        if block:
+            shown = True
+            st.markdown(block, unsafe_allow_html=True)
+    if not shown:
+        st.caption("Không có câu bằng chứng hợp lệ.")
+    sources = field_sources_html(item, result)
+    if sources:
+        st.markdown("**Nguồn của từng trường**")
+        st.markdown(sources, unsafe_allow_html=True)
+    against = contradicted_html(item, result)
+    if against:
+        st.markdown("**Bị phản bác bởi**")
+        st.markdown(against, unsafe_allow_html=True)
+
+
+def render_related(item: Item, result: RunResult) -> None:
+    related = related_summaries(item, result)
+    if not related:
+        return
+    st.markdown("**Mục liên quan**")
+    lines = [f"• **{html.escape(rid)}** — {html.escape(text) if ok else '(mục không còn trong kết quả)'}"
+             for rid, text, ok in related]
+    st.markdown("  \n".join(lines), unsafe_allow_html=True)
+
+
 @st.dialog("Chi tiết mục", width="large")
 def item_dialog(run_dir: Path, result: RunResult, item_id: str) -> None:
     item = next(i for i in result.items if i.item_id == item_id)
@@ -648,6 +768,12 @@ def item_dialog(run_dir: Path, result: RunResult, item_id: str) -> None:
         info.append(f"**Điều kiện:** {item.condition}")
     info.append(f"**Phụ trách:** {item.owner or '—'}  ·  **Hạn chót:** {item.deadline or '—'}  ·  "
                 f"**Độ tin cậy:** {fmt_num(item.confidence)}")
+    if item.commitment in COMMITMENT_LABELS:
+        info.append(f"**Cam kết:** {COMMITMENT_LABELS[item.commitment]}")
+    if item.pending_on:
+        info.append(f"**Đang chờ:** {item.pending_on}")
+    if item.follow_up_owner:
+        info.append(f"**Người theo dõi:** {item.follow_up_owner}")
     st.markdown("  \n".join(info))
     explanation = confidence_explanation_html(item)
     if explanation:
@@ -659,12 +785,8 @@ def item_dialog(run_dir: Path, result: RunResult, item_id: str) -> None:
     if clip:
         render_audio_player(clip)
 
-    st.markdown("**Trích dẫn nguyên văn**")
-    for e in item.evidence:
-        u = by_id.get(e)
-        if u:
-            st.markdown(f"<div class='quote'><small>{u.id} · {u.time} · <b>{html.escape(u.speaker)}</b></small>"
-                        f"<br>{html.escape(u.text)}</div>", unsafe_allow_html=True)
+    render_evidence(item, result)
+    render_related(item, result)
     if item.history:
         st.markdown("**Lịch sử thay đổi**")
         rows = []
@@ -699,10 +821,14 @@ def item_dialog(run_dir: Path, result: RunResult, item_id: str) -> None:
         e1, e2 = st.columns(2)
         owner = e1.text_input("Người phụ trách", item.owner or "")
         deadline = e2.text_input("Hạn chót", item.deadline or "")
+        e3, e4 = st.columns(2)
+        pending_on = e3.text_input("Đang chờ", item.pending_on or "")
+        follow_up = e4.text_input("Người theo dõi", item.follow_up_owner or "")
         if st.form_submit_button("Lưu chỉnh sửa", type="primary"):
             set_review(run_dir, item_id, "edited", {
                 "content": content.strip(), "status": status or None, "condition": condition.strip() or None,
                 "owner": owner.strip() or None, "deadline": deadline.strip() or None,
+                "pending_on": pending_on.strip() or None, "follow_up_owner": follow_up.strip() or None,
             })
             st.rerun()
 
@@ -820,6 +946,64 @@ def qa_tab(run_dir: Path, result: RunResult) -> None:
             render_qa_entry(entry, result)
 
 
+REASON_BADGES = {
+    "missing_owner": "Thiếu người phụ trách", "unresolved_reference": "Tham chiếu chưa rõ",
+    "conflicting_decision": "Quyết định mâu thuẫn", "needs_recheck": "Cần kiểm tra lại",
+    "quote_mismatch": "Trích dẫn không khớp", "no_follow_up": "Chưa có người theo dõi",
+}
+
+
+def clarify_tab(run_dir: Path, result: RunResult, reviews: dict[str, Any]) -> None:
+    entries = clarification_items(result, reviews)
+    if not entries:
+        st.info("Không có mục nào cần làm rõ.")
+        return
+    by_id = {i.item_id: i for i in result.items}
+    open_count = sum(1 for c in entries if not c.answered)
+    st.caption(f"{open_count}/{len(entries)} câu hỏi chưa được trả lời. Câu hỏi sinh theo mẫu, không dùng AI; "
+               "câu trả lời được lưu như chỉnh sửa của người duyệt.")
+    for c in entries:
+        item = by_id[c.item_id]
+        key = f"{c.item_id}-{c.reason}"
+        with st.container(border=True, key=f"clarify-{key}"):
+            st.markdown(f"**{html.escape(item.item_id)}** · {badge(REASON_BADGES.get(c.reason, c.reason), ('#fff3e0', '#b45f06'))}"
+                        f" {html.escape(item.content)}", unsafe_allow_html=True)
+            st.markdown(f"❓ {html.escape(c.question)}", unsafe_allow_html=True)
+            if c.answered:
+                st.caption(f"Đã trả lời: {c.answered}")
+            with st.form(f"clarify-form-{key}", clear_on_submit=True):
+                answer = st.text_input("Trả lời", key=f"clarify-answer-{key}", label_visibility="collapsed",
+                                       placeholder="Nhập câu trả lời ngắn")
+                if st.form_submit_button("Lưu trả lời", key=f"clarify-submit-{key}") and answer.strip():
+                    existing = get_reviews(run_dir)["items"].get(c.item_id, {})
+                    set_review(run_dir, c.item_id, "edited", answer_edits(existing, c, answer))
+                    st.rerun()
+
+
+def knowledge_tab(result: RunResult, run_dir: Path) -> None:
+    entries = knowledge_entries(result)
+    unlabeled = sum(1 for i in result.items if i.type == ItemType.knowledge and not i.knowledge_scope)
+    if unlabeled:
+        st.caption(f"{unlabeled} mục tri thức chưa có nhãn phạm vi (kết quả chạy trước khi có tính năng này) "
+                   "nên chưa vào kho.")
+    if not entries:
+        st.info("Chưa có tri thức nào thuộc phạm vi dự án hoặc dùng lại nhiều lần.")
+        return
+    st.download_button("⬇ knowledge.json", knowledge_to_json(result), file_name=f"{run_dir.name}.knowledge.json",
+                       mime="application/json")
+    rows = []
+    for e in entries:
+        src = e["source"]
+        rows.append({
+            "ID": e["item_id"], "Nội dung": e["content"], "Phạm vi": e["scope_label"],
+            "Cần kiểm tra lại": "Có" if e["needs_recheck"] else "",
+            "Nguồn": " · ".join(x for x in [src["meeting"], src["date"]] if x),
+            "Câu nguồn": "\n".join(f"{u['id']} [{u['time']}] {u['speaker']}: {u['text']}" for u in src["utterances"]),
+            "Duyệt": REVIEW_LABELS.get(e["review"], e["review"]),
+        })
+    st.dataframe(pd.DataFrame(rows), hide_index=True, use_container_width=True)
+
+
 def page_run() -> None:
     run_dir = Path(st.session_state.run_dir)
     if not (run_dir / "result.json").exists():
@@ -860,7 +1044,7 @@ def page_run() -> None:
                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                            use_container_width=True, help="Chỉ gồm các mục đã Chấp nhận / Đã sửa")
         if a4.button("✔ Duyệt nhanh", type="primary", use_container_width=True, disabled=not failed_ack,
-                     help="Chấp nhận mọi mục chưa duyệt không có cờ và độ tin cậy ≥ 70%"):
+                     help="Chấp nhận mọi mục chưa duyệt không có cờ và độ tin cậy ≥ 0,70"):
             for i in result.items:
                 if i.review == "pending" and not i.flags and i.confidence >= 0.7:
                     set_review(run_dir, i.item_id, "accepted")
@@ -868,7 +1052,7 @@ def page_run() -> None:
         st.write("")
         stat_cards(result.items)
         st.write("")
-        tabs = st.tabs(["Tổng quan"] + [g[1] for g in GROUPS] + ["Hỏi đáp"])
+        tabs = st.tabs(["Tổng quan"] + [g[1] for g in GROUPS] + ["Cần làm rõ", "Kho tri thức", "Hỏi đáp"])
         with tabs[0]:
             st.markdown(f"**Danh sách kết quả** <span class='count-pill'>{len(result.items)} mục</span> "
                         "<span class='muted'>· mục có cờ hoặc độ tin cậy thấp được đưa lên đầu</span>",
@@ -883,6 +1067,10 @@ def page_run() -> None:
                     item_table(run_dir, result, items, key, f"ov-{key}")
         with tabs[-1]:
             qa_tab(run_dir, result)
+        with tabs[-3]:
+            clarify_tab(run_dir, result, reviews)
+        with tabs[-2]:
+            knowledge_tab(result, run_dir)
         for tab, (key, label, types) in zip(tabs[1:1 + len(GROUPS)], GROUPS):
             with tab:
                 items = group_items(result.items, types)

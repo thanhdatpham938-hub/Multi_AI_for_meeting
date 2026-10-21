@@ -87,6 +87,23 @@ def _merge_windows(
     return topics, merged.model_dump()
 
 
+def merge_topics(
+    llm: LLMClient, model: str, topics: list[Topic], utterances: list[Utterance], meta: MeetingMeta | None = None
+) -> tuple[list[Topic], dict[str, Any]]:
+    """One LLM call that groups duplicate topics of the whole meeting (L3).
+
+    Fewer than 2 topics -> no call. Raises LLMError when the call fails: the caller keeps the
+    unmerged topics and records a warning.
+    """
+    if len(topics) < 2:
+        return topics, {"skipped": True}
+    merged, raw = _merge_windows(llm, model, topics, utterances, meta)
+    result = normalize_topics(merged, utterances)
+    if not result:
+        return topics, {"skipped": True, "reason": "merge returned nothing", "raw": raw}
+    return result, {"raw": raw, "before": len(topics), "after": len(result)}
+
+
 def segment(
     llm: LLMClient, model: str, utterances: list[Utterance], meta: MeetingMeta | None = None
 ) -> tuple[list[Topic], dict[str, Any]]:

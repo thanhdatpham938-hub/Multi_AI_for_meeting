@@ -2,21 +2,25 @@
 
 from __future__ import annotations
 
+import html
 import json
 import re
+import unicodedata
 from io import BytesIO
 from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple
 
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 
-from .models import Item, ItemType, RunResult
+from .models import Item, ItemType, RunResult, Utterance
 
 REVIEWS_FILE = "reviews.json"
 EXPORTED_REVIEWS = {"accepted", "edited"}
-EDITABLE_FIELDS = ("content", "status", "owner", "deadline", "condition")
+EDITABLE_FIELDS = ("content", "status", "owner", "deadline", "condition", "pending_on", "follow_up_owner")
+# Review keys that apply_reviews deliberately ignores: free-text reviewer note and answers to clarification questions.
+NOTE_KEYS = ("note", "answers")
 
 TYPE_LABELS = {
     ItemType.decision: "Quyết định",
@@ -47,6 +51,16 @@ FLAG_LABELS = {
     "needs_recheck": "Cần kiểm tra lại",
     "quote_mismatch": "Trích dẫn không khớp",
 }
+COMMITMENT_LABELS = {
+    "assigned": "Được giao việc",
+    "accepted": "Đã nhận việc",
+    "volunteered_conditional": "Xung phong (có điều kiện)",
+    "already_done": "Đã làm xong",
+    "hypothetical": "Giả định",
+}
+SCOPE_LABELS = {"ephemeral": "Tạm thời", "project": "Theo dự án", "reusable": "Dùng lại nhiều lần"}
+KNOWLEDGE_SCOPES_KEPT = ("project", "reusable")
+KNOWLEDGE_SHEET = "Kho tri thức"
 REVIEW_LABELS = {"pending": "Chờ duyệt", "accepted": "Chấp nhận", "edited": "Đã sửa", "rejected": "Loại"}
 
 
@@ -182,6 +196,7 @@ def to_excel(result: RunResult, only_reviewed: bool = True) -> bytes:
             for cell in row:
                 cell.alignment = Alignment(wrap_text=True, vertical="top")
         ws.freeze_panes = "A2"
+    _add_knowledge_sheet(wb, result, only_reviewed, header_fill)
     buf = BytesIO()
     wb.save(buf)
     return buf.getvalue()
@@ -195,9 +210,258 @@ def export_run(run_dir: str | Path, fmt: str = "xlsx", only_reviewed: bool = Tru
     if fmt == "json":
         path = run_dir / "export.json"
         path.write_text(to_json(result), encoding="utf-8")
+    elif fmt == "knowledge":
+        path = run_dir / "knowledge.json"
+        path.write_text(knowledge_to_json(result, only_reviewed=only_reviewed), encoding="utf-8")
     elif fmt == "xlsx":
         path = run_dir / "export.xlsx"
         path.write_bytes(to_excel(result, only_reviewed=only_reviewed))
     else:
         raise ValueError(f"Định dạng không hỗ trợ: {fmt}")
     return path
+
+
+# ---------------------------------------------------------------- evidence display (pure helpers)
+
+
+def _fold_with_map(text: str) -> tuple[str, list[int]]:
+    """Lowercase + collapse whitespace like provenance.normalize_text (without edge stripping).
+
+    Returns the folded string and, for every folded char, the index in `text` it came from.
+    """
+    folded: list[str] = []
+    index: list[int] = []
+    prev_space = True  # drops leading whitespace
+    for pos, ch in enumerate(text):
+        if ch.isspace():
+            if not prev_space:
+                folded.append(" ")
+                index.append(pos)
+            prev_space = True
+            continue
+        prev_space = False
+        for low in ch.lower():
+            folded.append(low)
+            index.append(pos)
+    return "".join(folded), index
+
+
+def locate_quote(text: str, quote: str) -> tuple[int, int] | None:
+    """Span (start, end) of `quote` inside NFC-normalized `text`, matched after normalization; None if absent."""
+    from .provenance import normalize_text  # local import keeps export light
+
+    q = normalize_text(quote)
+    if not q:
+        return None
+    folded, index = _fold_with_map(unicodedata.normalize("NFC", text))
+    start = folded.find(q)
+    if start < 0:
+        return None
+    return index[start], index[start + len(q) - 1] + 1
+
+
+def highlight_quote_html(text: str, quote: str | None) -> tuple[str, bool | None]:
+    """HTML-escaped `text` with the quote in <b>. Flag: None = no quote given, True = found, False = not found."""
+    text = unicodedata.normalize("NFC", text)
+    if not quote or not quote.strip():
+        return html.escape(text), None
+    span = locate_quote(text, quote)
+    if span is None:
+        return html.escape(text), False
+    a, b = span
+    return f"{html.escape(text[:a])}<b>{html.escape(text[a:b])}</b>{html.escape(text[b:])}", True
+
+
+def utterance_context(utterances: list[Utterance], uid: str, n: int = 2) -> tuple[list[Utterance], list[Utterance]]:
+    """Up to `n` utterances before and after `uid`; ([], []) when the id is unknown."""
+    pos = next((k for k, u in enumerate(utterances) if u.id == uid), None)
+    if pos is None:
+        return [], []
+    return utterances[max(0, pos - n):pos], utterances[pos + 1:pos + 1 + n]
+
+
+def related_summaries(item: Item, result: RunResult, max_len: int = 80) -> list[tuple[str, str, bool]]:
+    """(item_id, short content, exists) for each related item; unknown ids are kept with exists=False."""
+    by_id = {i.item_id: i for i in result.items}
+    out: list[tuple[str, str, bool]] = []
+    for rid in item.related_items:
+        other = by_id.get(rid)
+        if other is None:
+            out.append((rid, "", False))
+            continue
+        content = other.content if len(other.content) <= max_len else other.content[: max_len - 1].rstrip() + "…"
+        out.append((rid, content, True))
+    return out
+
+
+# ---------------------------------------------------------------- clarification questions (pure helpers)
+
+CLARIFY_FLAGS = ("missing_owner", "unresolved_reference", "conflicting_decision", "needs_recheck", "quote_mismatch")
+NO_FOLLOW_UP = "no_follow_up"  # pseudo-reason: deferred / conditional item nobody follows up
+_NUMBER_RE = re.compile(
+    r"\d[\d.,/]*\s?(?:triệu|tỷ|nghìn|ngàn|%|đồng|vnđ|vnd|usd|k|phút|giờ|ngày|tuần|tháng)?(?!\w)", re.IGNORECASE
+)
+
+
+class Clarification(NamedTuple):
+    item_id: str
+    reason: str  # one of CLARIFY_FLAGS or NO_FOLLOW_UP
+    question: str
+    answer_field: str  # "owner" | "follow_up_owner" | "note"
+    answered: str | None
+
+
+def _short(text: str, n: int = 90) -> str:
+    text = " ".join(text.split())
+    return text if len(text) <= n else text[: n - 1].rstrip() + "…"
+
+
+def _first_quote(item: Item, result: RunResult) -> str:
+    for quote in item.evidence_quotes.values():
+        if quote.strip():
+            return _short(quote)
+    by_id = {u.id: u for u in result.utterances}
+    for uid in item.evidence:
+        if uid in by_id:
+            return _short(by_id[uid].text)
+    return _short(item.content)
+
+
+def _number_in(text: str) -> str | None:
+    match = _NUMBER_RE.search(text)
+    return match.group(0).strip() if match else None
+
+
+def _other_decision_text(item: Item, result: RunResult) -> str:
+    by_id = {i.item_id: i for i in result.items}
+    for rid in item.related_items:
+        other = by_id.get(rid)
+        if other is not None and other.type == ItemType.decision and other.item_id != item.item_id:
+            return _short(other.content)
+    return "một quyết định khác trong cuộc họp"
+
+
+def clarification_question(item: Item, reason: str, result: RunResult) -> str:
+    """Vietnamese follow-up question for one reason, from a fixed template (no AI)."""
+    content = _short(item.content)
+    if reason == "missing_owner":
+        return f"Ai chịu trách nhiệm: {content}?"
+    if reason == "unresolved_reference":
+        return f"'{_first_quote(item, result)}' đang nói tới phương án nào?"
+    if reason == "conflicting_decision":
+        return f"{content} và {_other_decision_text(item, result)} – quyết định nào là cuối cùng?"
+    if reason == "needs_recheck":
+        number = _number_in(item.content)
+        if number:
+            return f"Con số '{number}' còn đúng không?"
+        return f"Thông tin '{content}' còn đúng không?"
+    if reason == "quote_mismatch":
+        return f"Trích dẫn '{_first_quote(item, result)}' không khớp câu gốc – nội dung '{content}' có đúng không?"
+    if reason == NO_FOLLOW_UP:
+        return f"Ai theo dõi và báo lại (đang chờ: {item.pending_on or 'chưa rõ'}): {content}?"
+    return f"{content} – cần làm rõ điều gì?"
+
+
+def clarification_reasons(item: Item) -> list[str]:
+    reasons = [f for f in CLARIFY_FLAGS if f in item.flags]
+    status = item.status.value if item.status else None
+    if status in ("deferred", "conditional") and not item.follow_up_owner:
+        reasons.append(NO_FOLLOW_UP)
+    return reasons
+
+
+def _answer_field(reason: str) -> str:
+    return {"missing_owner": "owner", NO_FOLLOW_UP: "follow_up_owner"}.get(reason, "note")
+
+
+def clarification_items(result: RunResult, reviews: dict[str, Any] | None = None) -> list[Clarification]:
+    """Questions for items needing clarification; rejected items are skipped; answered ones keep their answer.
+
+    `result` should be the review-applied result (an answered owner / follow_up_owner already filled in).
+    """
+    reviews = reviews or {}
+    out: list[Clarification] = []
+    for item in result.items:
+        if item.review == "rejected":
+            continue
+        answers = reviews.get("items", {}).get(item.item_id, {}).get("answers")
+        answers = answers if isinstance(answers, dict) else {}
+        for reason in clarification_reasons(item):
+            out.append(Clarification(item.item_id, reason, clarification_question(item, reason, result),
+                                     _answer_field(reason), answers.get(reason) or None))
+        for reason in (r for r in answers if r == NO_FOLLOW_UP and NO_FOLLOW_UP not in clarification_reasons(item)):
+            out.append(Clarification(item.item_id, reason, clarification_question(item, reason, result),
+                                     _answer_field(reason), answers.get(reason) or None))
+    return out
+
+
+def answer_edits(existing: dict[str, Any], c: Clarification, answer: str) -> dict[str, Any]:
+    """Fields to merge into a review entry when the reviewer answers `c` (caller sets review='edited')."""
+    answer = answer.strip()
+    answers = dict(existing.get("answers") or {})
+    answers[c.reason] = answer
+    edits: dict[str, Any] = {"answers": answers, "note": "\n".join(f"{k}: {v}" for k, v in answers.items())}
+    if c.answer_field != "note":
+        edits[c.answer_field] = answer
+    return edits
+
+
+# ---------------------------------------------------------------- knowledge base
+
+
+def knowledge_entries(result: RunResult, only_reviewed: bool = False) -> list[dict[str, Any]]:
+    """Knowledge items with scope project/reusable (never ephemeral, never rejected)."""
+    meta = result.meta
+    meeting = (meta.title if meta and meta.title else None) or Path(result.source_file).name
+    by_id = {u.id: u for u in result.utterances}
+    out: list[dict[str, Any]] = []
+    for item in result.items:
+        if item.type != ItemType.knowledge or item.knowledge_scope not in KNOWLEDGE_SCOPES_KEPT:
+            continue
+        if item.review == "rejected" or (only_reviewed and item.review not in EXPORTED_REVIEWS):
+            continue
+        utts = [{"id": u.id, "time": u.time, "speaker": u.speaker, "text": u.text}
+                for u in (by_id[e] for e in item.evidence if e in by_id)]
+        out.append({
+            "item_id": item.item_id, "content": item.content, "topic": item.topic,
+            "scope": item.knowledge_scope, "scope_label": SCOPE_LABELS[item.knowledge_scope],
+            "needs_recheck": "needs_recheck" in item.flags, "confidence": round(item.confidence, 2),
+            "review": item.review,
+            "source": {"meeting": meeting, "date": meta.date if meta else None,
+                       "project": meta.project if meta else None, "utterances": utts},
+        })
+    return out
+
+
+def knowledge_to_json(result: RunResult, only_reviewed: bool = False) -> str:
+    return json.dumps({"run_id": result.run_id, "entries": knowledge_entries(result, only_reviewed)},
+                      ensure_ascii=False, indent=2)
+
+
+KNOWLEDGE_COLUMNS = [
+    ("ID", 7), ("Nội dung", 52), ("Chủ đề", 22), ("Phạm vi", 18), ("Cần kiểm tra lại", 16),
+    ("Cuộc họp", 28), ("Ngày", 12), ("Câu nguồn", 60), ("Độ tin cậy", 11), ("Duyệt", 12),
+]
+
+
+def _add_knowledge_sheet(wb: Workbook, result: RunResult, only_reviewed: bool, header_fill: PatternFill) -> None:
+    entries = knowledge_entries(result, only_reviewed)
+    if not entries:
+        return
+    ws = wb.create_sheet(KNOWLEDGE_SHEET)
+    ws.append([c for c, _ in KNOWLEDGE_COLUMNS])
+    for idx, (_, width) in enumerate(KNOWLEDGE_COLUMNS, start=1):
+        cell = ws.cell(row=1, column=idx)
+        cell.font = Font(bold=True, color="FFFFFF")
+        cell.fill = header_fill
+        ws.column_dimensions[get_column_letter(idx)].width = width
+    for e in entries:
+        src = e["source"]
+        cites = "\n".join(f"{u['id']} [{u['time']}] {u['speaker']}: {u['text']}" for u in src["utterances"])
+        ws.append([e["item_id"], e["content"], e["topic"], e["scope_label"], "Có" if e["needs_recheck"] else "",
+                   src["meeting"], src["date"] or "", cites, e["confidence"],
+                   REVIEW_LABELS.get(e["review"], e["review"])])
+    for row in ws.iter_rows(min_row=2):
+        for cell in row:
+            cell.alignment = Alignment(wrap_text=True, vertical="top")
+    ws.freeze_panes = "A2"

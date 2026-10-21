@@ -55,6 +55,16 @@ def format_candidates(candidates: list[Candidate]) -> str:
     return json.dumps([c.model_dump(mode="json") for c in candidates], ensure_ascii=False, indent=1)
 
 
+def format_digest_block(digest: str) -> str:
+    """Prompt block for the outline; empty when there is none."""
+    if not digest.strip():
+        return ""
+    return (
+        "Dàn ý toàn cuộc họp (chỉ để hiểu ngữ cảnh, không phải bằng chứng):\n"
+        f"{digest.strip()}\n"
+    )
+
+
 def track_detailed(
     llm: LLMClient,
     model: str,
@@ -63,9 +73,11 @@ def track_detailed(
     utterances: list[Utterance],
     meta: MeetingMeta | None = None,
     feedback: str | None = None,
+    digest: str = "",
 ) -> TrackResult:
     """Return Items (item_id left empty – rules assign it) plus warnings for dropped parts.
 
+    `digest` is the optional whole-meeting outline (context only, never evidence).
     Raises LLMError (or TrackerFailed) when Agent 3 produced nothing usable.
     """
     prompt = load_prompt("track")
@@ -79,6 +91,7 @@ def track_detailed(
         UTTERANCES=format_utterances(select(utterances, topic.utterance_ids)),
         CANDIDATES=format_candidates(candidates),
         FEEDBACK=fb,
+        DIGEST=format_digest_block(digest),
     )
     raw = llm.complete_json(model=model, system=prompt.system, user=user, schema=RawTrackOutput, purpose="track")
     if candidates and not raw.items:
@@ -97,9 +110,10 @@ def track(
     utterances: list[Utterance],
     meta: MeetingMeta | None = None,
     feedback: str | None = None,
+    digest: str = "",
 ) -> list[Item]:
     """Convenience wrapper around `track_detailed` that drops the warnings."""
-    return track_detailed(llm, model, topic, candidates, utterances, meta, feedback).items
+    return track_detailed(llm, model, topic, candidates, utterances, meta, feedback, digest).items
 
 
 def validate_raw_items(raw_items: list[Any], topic: Topic) -> tuple[list[TrackedItem], list[str], int]:

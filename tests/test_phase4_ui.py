@@ -149,9 +149,15 @@ def test_missing_audio_file_shows_note_not_error(run_dir):
 def test_audio_path_cannot_escape_run_folder(run_dir, tmp_path):
     _with_audio(run_dir, flag=True, write_file=False)
     _patch_result(run_dir, lambda d: d.update(audio_path="../../secret.mp3"))
-    (tmp_path / "secret.mp3").write_bytes(b"x")
+    outside = tmp_path / "secret.mp3"  # two levels above run_dir: exactly what "../../" points to
+    outside.write_bytes(b"outside")
+    assert (run_dir / ".." / ".." / "secret.mp3").resolve() == outside.resolve()
     at = _open_detail(_open_run(run_dir))
-    assert not at.exception and _audio_count(at) == 0
+    assert not at.exception and _audio_count(at) == 0  # the outside file is NOT served
+    assert "không thể phát lại" in _text(at)
+    (run_dir / "secret.mp3").write_bytes(b"inside")  # same file name inside the run folder: now it is served
+    at = _open_detail(_open_run(run_dir))
+    assert not at.exception and _audio_count(at) == 1
 
 
 def _audio_uploader(at: AppTest):
@@ -293,6 +299,17 @@ def test_qa_warning_shown_as_warning(run_dir, fake_qa):
 def test_qa_llm_error_shows_message_not_crash(run_dir, fake_qa):
     _, reply = fake_qa
     reply["raise"] = LLMError("Thiếu OPENAI_API_KEY")
+    at = _ask(_open_run(run_dir), "hỏi")
+    assert not at.exception
+    assert any("Thiếu OPENAI_API_KEY" in e.value for e in at.error)
+
+
+def test_qa_make_llm_error_shows_message_not_crash(run_dir, monkeypatch):
+    """N5: a missing key makes make_llm itself raise LLMError (before qa.answer is reached)."""
+    def no_key(settings):
+        raise LLMError("Thiếu OPENAI_API_KEY")
+
+    monkeypatch.setattr("meeting_extractor.llm.make_llm", no_key)
     at = _ask(_open_run(run_dir), "hỏi")
     assert not at.exception
     assert any("Thiếu OPENAI_API_KEY" in e.value for e in at.error)

@@ -56,7 +56,8 @@ def main(argv: list[str] | None = None) -> int:
 
     p_exp = sub.add_parser("export", help="Xuất kết quả một lần chạy")
     p_exp.add_argument("run_dir", type=Path)
-    p_exp.add_argument("--format", choices=["json", "xlsx"], default="xlsx")
+    p_exp.add_argument("--format", choices=["json", "xlsx", "knowledge"], default="xlsx",
+                       help="knowledge = kho tri thức (knowledge.json)")
     p_exp.add_argument("--all", action="store_true", help="Xuất cả mục chưa duyệt (để duyệt trong Excel)")
 
     args = parser.parse_args(argv)

@@ -15,7 +15,7 @@ def utts(n: int) -> list[Utterance]:
     return [Utterance(id=f"u{i:03d}", time="00:00", speaker="A", text=f"câu {i}") for i in range(1, n + 1)]
 
 
-@pytest.mark.parametrize("name", ["segment", "segment_merge", "extract", "track", "verify"])
+@pytest.mark.parametrize("name", ["segment", "segment_merge", "digest", "reconcile", "extract", "track", "verify"])
 def test_prompts_load_and_mark_transcript_as_data(name):
     prompt = load_prompt(name)
     assert prompt.system and prompt.user_template
