@@ -7,10 +7,13 @@ from __future__ import annotations
 
 import html
 import json
+import re
+import shutil
 import sys
+import tempfile
 from datetime import date, datetime, time
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable, NamedTuple
 
 import pandas as pd
 import streamlit as st
@@ -18,6 +21,7 @@ import streamlit as st
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
+from meeting_extractor.audio import check_audio_file, clip_range, format_time  # noqa: E402
 from meeting_extractor.config import load_settings  # noqa: E402
 from meeting_extractor.export import (  # noqa: E402
     FLAG_LABELS,
@@ -29,9 +33,11 @@ from meeting_extractor.export import (  # noqa: E402
     to_excel,
     to_json,
 )
-from meeting_extractor.llm import LLMError  # noqa: E402
+from meeting_extractor.llm import LLMError, make_llm  # noqa: E402
 from meeting_extractor.models import Item, ItemType, MeetingMeta, Participant, RunResult, Status  # noqa: E402
 from meeting_extractor.parsing import is_anonymous_speaker, parse_text  # noqa: E402
+from meeting_extractor import pipeline as _pipeline  # noqa: E402
+from meeting_extractor import qa as _qa  # noqa: E402
 from meeting_extractor.pipeline import load_result, run_text  # noqa: E402
 
 ASSETS = Path(__file__).resolve().parent / "assets"
@@ -223,6 +229,110 @@ def set_review(run_dir: Path, item_id: str, review: str, edits: dict[str, Any] |
     persist_reviews(run_dir, reviews)
 
 
+# ---------------------------------------------------------------- confidence explanation (pure helpers)
+
+TEXT_EXTENSIONS = (".txt", ".vtt")
+AUDIO_UPLOAD_EXTENSIONS = (".mp3", ".m4a", ".wav", ".mp4")
+LOW_CONFIDENCE = 0.7
+POS_COLOR, NEG_COLOR, CAP_COLOR = "#1e7b3c", "#b42318", "#b45f06"
+# breakdown key -> Vietnamese label for regular terms
+TERM_LABELS = {
+    "closing_explicit": "câu chốt rõ", "closing_implicit": "câu chốt ngầm", "closing_none": "không có câu chốt",
+    "evidence_inferred": "bằng chứng suy luận", "closer_can_decide": "người chốt có quyền",
+    "closer_unknown": "chưa rõ quyền người chốt", "verify_passed": "kiểm chứng đạt",
+    "verify_failed": "kiểm chứng không đạt", "multi_evidence": "nhiều câu bằng chứng",
+    "contradicted_later": "bị phản bác sau đó", "noisy_evidence": "ghi âm không rõ",
+    "in_summary": "được nhắc trong câu tóm lại",
+}
+# keys that are limits (caps / clamp), not terms of the sum
+CAP_LABELS = {
+    "cap_authority": "trần: chưa rõ thẩm quyền", "cap_verify_failed": "trần: kiểm chứng không đạt",
+    "cap_tracker_failed": "trần: chủ đề lỗi khi phân tích", "clamp": "giới hạn thang điểm",
+}
+
+
+def fmt_num(value: float, signed: bool = False) -> str:
+    """0.72 -> '0,72'; with signed=True: '+0,20' / '−0,15' (typographic minus)."""
+    text = f"{abs(value):.2f}".replace(".", ",")
+    if not signed:
+        return f"-{text}" if value < 0 else text
+    return f"{'−' if value < 0 else '+'}{text}"
+
+
+def base_label(item: Item) -> str:
+    return f"nền ({TYPE_LABEL[item.type].lower()})"
+
+
+def confidence_terms(item: Item) -> tuple[list[tuple[str, float]], list[tuple[str, float]]]:
+    """Split the breakdown into (regular terms, limits) with Vietnamese labels. Base comes first."""
+    terms: list[tuple[str, float]] = []
+    caps: list[tuple[str, float]] = []
+    for key, value in item.confidence_breakdown.items():
+        if key == "base":
+            terms.insert(0, (base_label(item), value))
+        elif key in CAP_LABELS:
+            caps.append((CAP_LABELS[key], value))
+        else:
+            terms.append((TERM_LABELS.get(key, key), value))
+    return terms, caps
+
+
+def _term_html(label: str, value: float, first: bool) -> str:
+    color = POS_COLOR if value >= 0 else NEG_COLOR
+    num = fmt_num(value) if first else fmt_num(value, signed=True)
+    return f'<span style="color:{color};font-weight:600">{num}</span> {html.escape(label)}'
+
+
+def confidence_explanation_html(item: Item) -> str | None:
+    """HTML explaining how the confidence was computed; None for old runs without a breakdown."""
+    if not item.confidence_breakdown:
+        return None
+    terms, caps = confidence_terms(item)
+    parts = " ".join(_term_html(label, value, n == 0) for n, (label, value) in enumerate(terms))
+    lines = [f"<b>{fmt_num(item.confidence)}</b> = {parts}"]
+    for label, value in caps:
+        lines.append(f'<span style="color:{CAP_COLOR};font-weight:600">Giới hạn áp dụng: {html.escape(label)} '
+                     f"({fmt_num(value, signed=True)})</span>")
+    return "<br>".join(lines)
+
+
+# ---------------------------------------------------------------- audio playback (pure helpers)
+
+
+class AudioClip(NamedTuple):
+    path: Path
+    start: float
+    end: float
+    exists: bool
+
+
+def wants_audio(item: Item) -> bool:
+    return "number_check" in item.flags or item.confidence < LOW_CONFIDENCE
+
+
+def audio_clip_for(item: Item, result: RunResult, run_dir: Path) -> AudioClip | None:
+    """Clip to replay for an item, or None when there is no audio / no reason to listen / no timestamp."""
+    if not result.audio_path or not wants_audio(item):
+        return None
+    by_id = {u.id: u for u in result.utterances}
+    utt = next((by_id[e] for e in item.evidence if e in by_id and by_id[e].start_sec is not None), None)
+    if utt is None:
+        return None
+    start, end = clip_range(utt)
+    path = run_dir / Path(result.audio_path).name  # file name only: never leave the run folder
+    return AudioClip(path, start, end, path.is_file())
+
+
+def render_audio_player(clip: AudioClip) -> None:
+    st.markdown("**Nghe lại đoạn ghi âm**")
+    if not clip.exists:
+        st.caption("File ghi âm không còn trong thư mục chạy (ví dụ ứng dụng được chạy lại trên máy khác), "
+                   "không thể phát lại.")
+        return
+    st.audio(str(clip.path), start_time=int(clip.start), end_time=int(clip.end) + 1)
+    st.caption(f"Đang phát từ {format_time(clip.start)}")
+
+
 # ---------------------------------------------------------------- sidebar
 
 
@@ -353,9 +463,14 @@ def page_new() -> None:
     with left:
         with st.container(border=True):
             st.markdown('<div class="panel-title">📄 Transcript</div>', unsafe_allow_html=True)
-            st.markdown('<div class="muted">Định dạng .txt mỗi dòng <code>[mm:ss] Tên: nội dung</code> hoặc .vtt</div>',
+            st.markdown('<div class="muted">Định dạng .txt mỗi dòng <code>[mm:ss] Tên: nội dung</code>, .vtt, '
+                        "hoặc file ghi âm .mp3 / .m4a / .wav / .mp4 (tối đa 25 MB). Chỉ chọn một file.</div>",
                         unsafe_allow_html=True)
-            upload = st.file_uploader("Tải transcript", type=["txt", "vtt"], label_visibility="collapsed")
+            exts = [e.lstrip(".") for e in TEXT_EXTENSIONS + AUDIO_UPLOAD_EXTENSIONS]
+            upload = st.file_uploader("Tải transcript hoặc ghi âm", type=exts, label_visibility="collapsed")
+            if upload is not None and Path(upload.name).suffix.lower() in AUDIO_UPLOAD_EXTENSIONS:
+                audio_section(upload, meta)
+                return
             text, name = "", ""
             if upload is not None:
                 text, name = upload.getvalue().decode("utf-8-sig"), upload.name
@@ -373,7 +488,33 @@ def page_new() -> None:
             analyze(text, name, meta)
 
 
+def audio_section(upload: Any, meta: MeetingMeta | None) -> None:
+    """Audio upload: validate size/format locally (no API call), then speech-to-text + pipeline."""
+    stem = re.sub(r"[^\w\-]+", "_", Path(upload.name).stem, flags=re.ASCII)[:40].strip("_") or "audio"
+    tmp_dir = Path(tempfile.mkdtemp(prefix="meetsync_"))
+    path = tmp_dir / f"{stem}{Path(upload.name).suffix.lower()}"
+    try:
+        path.write_bytes(upload.getvalue())
+        try:
+            size = check_audio_file(path)
+        except (ValueError, FileNotFoundError) as exc:
+            st.error(str(exc))
+            st.button("🔍  Phân tích", type="primary", disabled=True, use_container_width=True)
+            return
+        st.success(f"Nhận file ghi âm {upload.name} ({size / 1024 / 1024:.1f} MB).")
+        st.caption("Hệ thống sẽ chuyển giọng nói thành văn bản (có tách người nói) rồi phân tích như transcript. "
+                   "Chi phí chuyển giọng nói tính theo thời lượng ghi âm.")
+        if st.button("🔍  Phân tích", type="primary", use_container_width=True):
+            analyze_with(lambda progress: _pipeline.run_audio(path, meta, settings=SETTINGS, progress=progress))
+    finally:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+
+
 def analyze(text: str, name: str, meta: MeetingMeta | None) -> None:
+    analyze_with(lambda progress: run_text(text, name, meta, settings=SETTINGS, progress=progress))
+
+
+def analyze_with(runner: Callable[[Callable[[str, float], None]], RunResult]) -> None:
     bar = st.progress(0.0, text="Bắt đầu…")
     error = ""
     with st.status("Đang phân tích…", expanded=True) as status:
@@ -382,12 +523,12 @@ def analyze(text: str, name: str, meta: MeetingMeta | None) -> None:
             st.write(f"• {msg}")
 
         try:
-            result = run_text(text, name, meta, settings=SETTINGS, progress=progress)
+            result = runner(progress)
         except LLMError as exc:
             status.update(label="Lỗi khi gọi LLM", state="error")
             error = f"{exc}\n\nKiểm tra file `.env` (LLM_PROVIDER, OPENAI_API_KEY, MODEL_LIGHT, MODEL_STRONG)."
-        except ValueError as exc:
-            status.update(label="Transcript không hợp lệ", state="error")
+        except (ValueError, FileNotFoundError) as exc:
+            status.update(label="Đầu vào không hợp lệ", state="error")
             error = str(exc)
         else:
             status.update(label=f"Hoàn tất – {len(result.items)} mục", state="complete")
@@ -504,8 +645,17 @@ def item_dialog(run_dir: Path, result: RunResult, item_id: str) -> None:
     if item.condition:
         info.append(f"**Điều kiện:** {item.condition}")
     info.append(f"**Phụ trách:** {item.owner or '—'}  ·  **Hạn chót:** {item.deadline or '—'}  ·  "
-                f"**Độ tin cậy:** {item.confidence:.0%}")
+                f"**Độ tin cậy:** {fmt_num(item.confidence)}")
     st.markdown("  \n".join(info))
+    explanation = confidence_explanation_html(item)
+    if explanation:
+        with st.expander("Vì sao độ tin cậy là " + fmt_num(item.confidence) + "?", expanded=True):
+            st.markdown(explanation, unsafe_allow_html=True)
+    else:
+        st.caption("Độ tin cậy: chưa có phân tích chi tiết (kết quả chạy trước khi có tính năng này).")
+    clip = audio_clip_for(item, result, run_dir)
+    if clip:
+        render_audio_player(clip)
 
     st.markdown("**Trích dẫn nguyên văn**")
     for e in item.evidence:
@@ -620,6 +770,54 @@ def failed_topics_banner(run_dir: Path, result: RunResult) -> bool:
     return st.checkbox("Tôi đã đọc cảnh báo và hiểu kết quả có thể thiếu", key=f"failed-ack::{run_dir}")
 
 
+def qa_history(run_dir: Path) -> list[dict[str, Any]]:
+    """Q&A history lives in session_state per run, so meetings never mix."""
+    return st.session_state.setdefault(f"qa::{run_dir}", [])
+
+
+def render_qa_entry(entry: dict[str, Any], result: RunResult) -> None:
+    st.markdown(f"**Hỏi:** {html.escape(entry['question'])}", unsafe_allow_html=True)
+    if entry.get("error"):
+        st.error(entry["error"])
+        return
+    answer = _qa.QAAnswer.model_validate(entry["answer"])
+    if answer.warning:
+        st.warning(answer.warning)
+    if answer.out_of_scope:
+        st.info(answer.text or _qa.OUT_OF_SCOPE_TEXT)
+        return
+    st.markdown(f"**Trả lời:** {html.escape(answer.text)}", unsafe_allow_html=True)
+    by_id = {u.id: u for u in result.utterances}
+    for e in answer.evidence:
+        u = by_id.get(e)
+        if u:
+            st.markdown(f"<div class='quote'><small>{u.id} · {u.time} · <b>{html.escape(u.speaker)}</b></small>"
+                        f"<br>{html.escape(u.text)}</div>", unsafe_allow_html=True)
+
+
+def ask_question(question: str, result: RunResult) -> dict[str, Any]:
+    """Call the Q&A module; failures become a Vietnamese error entry instead of a crash."""
+    try:
+        answer = _qa.answer(question, result, make_llm(SETTINGS), SETTINGS)
+    except LLMError as exc:
+        return {"question": question, "error": f"Không trả lời được câu hỏi: {exc}"}
+    return {"question": question, "answer": answer.model_dump()}
+
+
+def qa_tab(run_dir: Path, result: RunResult) -> None:
+    st.caption("Hỏi về cuộc họp này. Chỉ các mục đã Chấp nhận / Đã sửa được dùng làm căn cứ, "
+               "kèm nguyên văn câu bằng chứng. Mỗi câu hỏi gọi AI, ước tính ~$0,01–0,02 với cuộc họp ~140 câu.")
+    history = qa_history(run_dir)
+    with st.form(f"qa-form::{run_dir}", clear_on_submit=True):
+        question = st.text_area("Câu hỏi", placeholder="Ví dụ: Ai phụ trách tài liệu API và hạn là khi nào?", height=80)
+        sent = st.form_submit_button("Gửi câu hỏi", type="primary")
+    if sent and question.strip():
+        history.append(ask_question(question.strip(), result))
+    for entry in reversed(history):
+        with st.container(border=True):
+            render_qa_entry(entry, result)
+
+
 def page_run() -> None:
     run_dir = Path(st.session_state.run_dir)
     if not (run_dir / "result.json").exists():
@@ -668,7 +866,7 @@ def page_run() -> None:
         st.write("")
         stat_cards(result.items)
         st.write("")
-        tabs = st.tabs(["Tổng quan"] + [g[1] for g in GROUPS])
+        tabs = st.tabs(["Tổng quan"] + [g[1] for g in GROUPS] + ["Hỏi đáp"])
         with tabs[0]:
             st.markdown(f"**Danh sách kết quả** <span class='count-pill'>{len(result.items)} mục</span> "
                         "<span class='muted'>· mục có cờ hoặc độ tin cậy thấp được đưa lên đầu</span>",
@@ -681,7 +879,9 @@ def page_run() -> None:
                     st.markdown(f"<span class='group-head'>{group_icon(key, 18)}&nbsp; {label} ({len(items)})</span>",
                                 unsafe_allow_html=True)
                     item_table(run_dir, result, items, key, f"ov-{key}")
-        for tab, (key, label, types) in zip(tabs[1:], GROUPS):
+        with tabs[-1]:
+            qa_tab(run_dir, result)
+        for tab, (key, label, types) in zip(tabs[1:1 + len(GROUPS)], GROUPS):
             with tab:
                 items = group_items(result.items, types)
                 if not items:
