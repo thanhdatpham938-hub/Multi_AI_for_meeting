@@ -9,6 +9,8 @@ from ..models import Candidate, Item, MeetingMeta, Topic, TrackOutput, Utterance
 from .common import format_participants, format_utterances, select
 
 TRACKER_FLAGS = {"no_closing_signal"}
+# Placeholder until rules.py computes confidence from labels (phase 3A).
+DEFAULT_CONFIDENCE = 0.5
 
 
 def format_candidates(candidates: list[Candidate]) -> str:
@@ -56,7 +58,7 @@ def track(
                 owner=t.owner,
                 deadline=t.deadline,
                 evidence=t.evidence,
-                confidence=t.confidence,
+                confidence=t.confidence if t.confidence is not None else DEFAULT_CONFIDENCE,
                 flags=[f for f in t.flags if f in TRACKER_FLAGS],
             )
         )

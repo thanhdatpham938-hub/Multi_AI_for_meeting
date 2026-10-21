@@ -13,7 +13,13 @@ VALID_FLAGS = (
     "missing_owner",
     "verify_failed",
     "low_confidence",
+    "tracker_failed",
+    "conflicting_decision",
 )
+
+# Discrete labels Agent 3 assigns; code turns them into a confidence score.
+CLOSING_SIGNALS = ("explicit", "implicit", "none")
+EVIDENCE_DIRECTNESS = ("direct", "inferred")
 
 REVIEW_STATES = ("pending", "accepted", "edited", "rejected")
 
@@ -23,6 +29,8 @@ class Utterance(BaseModel):
     time: str  # "41:05"
     speaker: str
     text: str
+    start_sec: float | None = None  # set for audio input, used by the audio player
+    end_sec: float | None = None
 
 
 class Participant(BaseModel):
@@ -77,10 +85,10 @@ class Candidate(BaseModel):  # Agent 2 output
 
 
 class HistoryEntry(BaseModel):
-    status: Status
+    status: Status  # stays required: invalid entries are dropped one by one in the tracker
     content: str | None = None
     reason: str | None = None
-    evidence: list[str]
+    evidence: list[str] = []
 
 
 class Item(BaseModel):  # final output
@@ -98,6 +106,13 @@ class Item(BaseModel):  # final output
     confidence: float = Field(ge=0, le=1)
     flags: list[str] = []
     review: str = "pending"  # pending | accepted | edited | rejected
+    # Labels from Agent 3 (None = not provided) – inputs of the confidence formula.
+    closing_signal: str | None = None  # explicit | implicit | none
+    evidence_directness: str | None = None  # direct | inferred
+    contradicted_later: bool | None = None
+    in_summary: bool | None = None
+    verify_passed: bool | None = None  # Agent 4 result; None = type not verified
+    confidence_breakdown: dict[str, float] = {}  # written by code to explain the score
 
 
 class RunResult(BaseModel):
@@ -111,6 +126,8 @@ class RunResult(BaseModel):
     items: list[Item]
     warnings: list[str] = []
     meta: MeetingMeta | None = None
+    audio_path: str | None = None
+    failed_topics: list[str] = []  # topic ids whose processing failed at any agent
 
 
 # ---- LLM response envelopes (one per agent) ----
@@ -135,8 +152,12 @@ class TrackedItem(BaseModel):
     owner: str | None = None
     deadline: str | None = None
     evidence: list[str] = Field(min_length=1)
-    confidence: float = Field(ge=0, le=1)
+    confidence: float | None = Field(default=None, ge=0, le=1)
     flags: list[str] = []
+    closing_signal: str | None = None
+    evidence_directness: str | None = None
+    contradicted_later: bool | None = None
+    in_summary: bool | None = None
 
 
 class TrackOutput(BaseModel):

@@ -79,6 +79,7 @@ FLAG_STYLE = {
     "verify_failed": ("#fde8e8", "#b42318"), "authority_unclear": ("#fff3e0", "#b45f06"),
     "number_check": ("#e8f0fe", "#1a56c4"), "missing_owner": ("#fdf6d8", "#8a6d00"),
     "no_closing_signal": ("#f1ebfb", "#6b3fb3"), "low_confidence": ("#f2f4f7", "#475467"),
+    "tracker_failed": ("#fde8e8", "#b42318"), "conflicting_decision": ("#fff3e0", "#b45f06"),
 }
 REVIEW_STYLE = {
     "pending": ("#f2f4f7", "#475467"), "accepted": ("#e7f6ec", "#1e7b3c"),

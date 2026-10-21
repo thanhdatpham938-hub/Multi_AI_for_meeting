@@ -107,3 +107,15 @@ def test_rule8_ids_and_sorting():
 def test_invalid_flags_removed_and_deduplicated():
     items, _ = run([mk(flags=["no_closing_signal", "no_closing_signal", "bogus"])])
     assert items[0].flags == ["no_closing_signal"]
+
+
+def test_new_phase2_flags_survive_rules():
+    items, _ = run([mk(flags=["tracker_failed", "conflicting_decision"])])
+    assert {"tracker_failed", "conflicting_decision"} <= set(items[0].flags)
+
+
+def test_every_valid_flag_has_a_label():
+    from meeting_extractor.export import FLAG_LABELS
+    from meeting_extractor.models import VALID_FLAGS
+
+    assert set(VALID_FLAGS) <= set(FLAG_LABELS)

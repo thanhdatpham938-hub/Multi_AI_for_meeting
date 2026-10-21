@@ -41,6 +41,8 @@ FLAG_LABELS = {
     "missing_owner": "Thiếu người phụ trách",
     "verify_failed": "Kiểm chứng không đạt",
     "low_confidence": "Độ tin cậy thấp",
+    "tracker_failed": "Lỗi theo dõi quyết định",
+    "conflicting_decision": "Quyết định mâu thuẫn",
 }
 REVIEW_LABELS = {"pending": "Chờ duyệt", "accepted": "Chấp nhận", "edited": "Đã sửa", "rejected": "Loại"}
 
