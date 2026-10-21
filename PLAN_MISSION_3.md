@@ -195,10 +195,10 @@ Sau M4: `pytest`, reviewer soát cả ba, commit. **Không chạy eval ở đây
 > - **Gộp chủ đề (L3):** sau Agent 1, luôn gọi một lần `prompts/segment_merge.md` với danh sách tất cả chủ đề (dùng lại hàm gộp trong `segmenter.py`). Không so đôi một.
 > - **Dàn ý dòng thời gian:** `prompts/digest.md` + `agents/digest.py`, model nhẹ, một lần mỗi cuộc họp: danh sách mốc (phút, người nói, sự kiện: đề xuất / phản bác / chốt / hoãn / chuyển chủ đề). Đưa dàn ý vào Agent 3 làm ngữ cảnh (chỉ thêm chỗ trống `{{DIGEST}}` vào `track.md` – báo 4A nếu còn chạy, nếu không thì sửa trực tiếp).
 > - **Đối soát:** `prompts/reconcile.md` + `agents/reconciler.py`, model mạnh, một lần sau mọi chủ đề: nhận danh sách mục (không kèm transcript đầy đủ, chỉ nội dung + trạng thái + câu bằng chứng) và trả các cặp mâu thuẫn + liên kết `related_items`. Code gắn cờ `conflicting_decision` cho cặp mâu thuẫn; **không tự xóa mục nào**.
-> - Quy tắc code (không cần LLM): cùng chủ đề có ≥ 2 `decision`, một `confirmed`, mục kia không phải `superseded` → `conflicting_decision`.
+> - Quy tắc code (không cần LLM): gắn cờ `conflicting_decision` cho mọi cặp mà `conflicts.is_conflict_pair` trả True (định nghĩa dùng chung với chỉ số `unflagged_conflicts`, viết ở M1B sau soát 21/10: hai `decision`, một `confirmed` và một `proposed/open/deferred/conditional`, cùng vấn đề = chung ID câu trong evidence/lịch sử **hoặc** chung ≥ 2 từ nội dung với hệ số chồng lấn ≥ 0,2, **không cần cùng chủ đề**). Định nghĩa cũ "cùng chủ đề" cho 18 cặp nhiễu ở case 2 và bỏ sót cặp sampling d02/d19.
 > - Chi phí thêm ước tính: +2 lần gọi mỗi cuộc họp (dàn ý ~$0,005 với model nhẹ; đối soát ~$0,02–0,04 với cuộc họp dài).
 >
-> File được phép: `agents/segmenter.py`, `agents/digest.py` (mới), `agents/reconciler.py` (mới), `prompts/digest.md` (mới), `prompts/reconcile.md` (mới), `prompts/segment_merge.md`, `pipeline.py`, `rules.py` (chỉ quy tắc mâu thuẫn, sau khi 4B đã commit), test mới.
+> File được phép: `agents/segmenter.py`, `agents/digest.py` (mới), `agents/reconciler.py` (mới), `prompts/digest.md` (mới), `prompts/reconcile.md` (mới), `prompts/segment_merge.md`, `pipeline.py`, `rules.py` (chỉ gọi `conflicts.conflict_pairs` để gắn cờ, sau khi 4B đã commit), test mới.
 
 ### 5B. Giao diện và xuất (K3, K4, K5)
 

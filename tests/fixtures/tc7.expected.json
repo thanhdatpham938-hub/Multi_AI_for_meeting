@@ -3,6 +3,7 @@
   "description": "Quyết định dựa vào cử chỉ và cuộc họp trước (giới hạn đã biết)",
   "known_limitation": true,
   "expect_no_confirmed": true,
+  "expect_flags_any": ["unresolved_reference"],
   "items": [
     {
       "type": "action",

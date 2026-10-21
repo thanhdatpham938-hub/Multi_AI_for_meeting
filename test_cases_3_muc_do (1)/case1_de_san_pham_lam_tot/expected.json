@@ -1,0 +1,40 @@
+{
+  "case": "CASE1",
+  "description": "Sprint planning BeautyBook: cuộc họp có cấu trúc rõ, một lần đổi MoMo sang VNPay",
+  "expect_no_confirmed": false,
+  "items": [
+    {"type": "decision", "status": "confirmed", "content": "Phạm vi Sprint 7: đặt lịch lặp lại và thanh toán online", "owner": null, "deadline": null, "condition": null, "evidence": ["u034", "u096"], "min_confidence": 0.8},
+    {"type": "decision", "status": "confirmed", "content": "Tích điểm thành viên dời sang Sprint 8", "owner": null, "deadline": null, "condition": null, "evidence": ["u033", "u034"], "optional": true},
+    {"type": "decision", "status": "confirmed", "content": "Cổng thanh toán: VNPay", "owner": null, "deadline": null, "condition": null, "evidence": ["u047"], "min_confidence": 0.8,
+     "history_superseded": [{"content": "Dùng MoMo", "evidence": ["u037", "u042", "u043", "u044"]}]},
+    {"type": "decision", "status": "confirmed", "content": "Code freeze 26/10, phát hành 28/10 lúc 22:00", "owner": null, "deadline": null, "condition": null, "evidence": ["u065", "u067"], "min_confidence": 0.8, "required_flags": ["number_check"]},
+    {"type": "decision", "status": "confirmed", "content": "Thanh toán từng buổi, mỗi buổi trước 24 giờ (không thanh toán cả chuỗi)", "owner": null, "deadline": null, "condition": null, "evidence": ["u090"], "min_confidence": 0.8},
+    {"type": "decision", "status": "confirmed", "content": "Sprint 7 chưa làm hoàn tiền tự động, lễ tân hoàn tay", "owner": null, "deadline": null, "condition": null, "evidence": ["u056"]},
+    {"type": "decision", "status": "confirmed", "content": "Lỗi múi giờ để trong backlog, chưa đưa vào Sprint 7", "owner": null, "deadline": null, "condition": null, "evidence": ["u017"]},
+    {"type": "decision", "status": "confirmed", "content": "Job sinh lịch giới hạn 8 tuần tới", "owner": null, "deadline": null, "condition": null, "evidence": ["u024"], "optional": true},
+    {"type": "decision", "status": "confirmed", "content": "Màn hình thanh toán hiển thị đồng hồ đếm ngược", "owner": null, "deadline": null, "condition": null, "evidence": ["u053"], "optional": true},
+
+    {"type": "action", "content": "Long test tính năng thông báo đẩy trên môi trường test", "owner": "Long", "deadline": "sáng nay", "condition": null, "evidence": ["u010"]},
+    {"type": "action", "content": "Long test lại lỗi đặt trùng lịch", "owner": "Long", "deadline": "hôm nay", "condition": null, "evidence": ["u014"]},
+    {"type": "action", "content": "Trang liên hệ khách xin tài khoản sandbox VNPay, gửi Hải", "owner": "Trang", "deadline": "16/10", "condition": null, "evidence": ["u049"]},
+    {"type": "action", "content": "Hải làm API thanh toán VNPay", "owner": "Hải", "deadline": "22/10", "condition": null, "evidence": ["u070"]},
+    {"type": "action", "content": "Đức làm job sinh lịch lặp lại (không phải Hải)", "owner": "Đức", "deadline": "21/10", "condition": null, "evidence": ["u072", "u073", "u074"]},
+    {"type": "action", "content": "Vy làm màn hình đặt lịch lặp lại và màn hình thanh toán", "owner": "Vy", "deadline": "24/10", "condition": null, "evidence": ["u075"]},
+    {"type": "action", "content": "Long viết test plan và test case cho hai tính năng", "owner": "Long", "deadline": "23/10", "condition": null, "evidence": ["u077"]},
+    {"type": "action", "content": "Đức trực phát hành tối 28/10", "owner": "Đức", "deadline": "28/10", "condition": null, "evidence": ["u067", "u068"], "required_flags": ["number_check"]},
+    {"type": "action", "content": "Đức review code hằng ngày lúc 16:00", "owner": "Đức", "deadline": null, "condition": null, "evidence": ["u079"], "optional": true},
+    {"type": "action", "content": "Long nhận hai máy Android ở phòng hành chính", "owner": "Long", "deadline": null, "condition": null, "evidence": ["u081"], "optional": true},
+    {"type": "action", "content": "Trang chuyển thiết kế màn hình thanh toán vào nhóm chat", "owner": "Trang", "deadline": "ngay sau họp", "condition": null, "evidence": ["u084"], "optional": true},
+    {"type": "action", "content": "Hải thêm thông báo nhắc thanh toán trước 24 giờ", "owner": "Hải", "deadline": null, "condition": null, "evidence": ["u091", "u092"], "optional": true},
+
+    {"type": "blocker", "content": "Chưa có tài khoản sandbox VNPay nên chưa test được", "owner": null, "deadline": null, "condition": null, "evidence": ["u048"]},
+    {"type": "knowledge", "content": "Sprint 6 hoàn thành 34/38 story point; thông báo đẩy trễ do chờ chứng chỉ Apple", "owner": null, "deadline": null, "condition": null, "evidence": ["u006"], "knowledge_scope": "ephemeral"},
+    {"type": "knowledge", "content": "Giao dịch sandbox VNPay tự hết hạn sau 15 phút nếu không xác nhận", "owner": null, "deadline": null, "condition": null, "evidence": ["u051"], "knowledge_scope": "reusable"},
+    {"type": "knowledge", "content": "Năng lực team: 1 sprint 2 tuần làm kịp 2 tính năng; thanh toán ~8 ngày công backend, FE 4 + 3 ngày, QA 2 ngày/tính năng", "owner": null, "deadline": null, "condition": null, "evidence": ["u028", "u029", "u030", "u031"], "knowledge_scope": "project"},
+    {"type": "knowledge", "content": "VNPay hỗ trợ QR và thẻ ATM nội địa", "owner": null, "deadline": null, "condition": null, "evidence": ["u046"], "knowledge_scope": "reusable", "optional": true}
+  ],
+  "forbidden": [
+    {"type": "decision", "statuses": ["confirmed", "conditional"], "evidence_only": ["u037", "u038", "u039", "u040", "u041", "u044"], "note": "MoMo không được là quyết định đã chốt"},
+    {"type": "decision", "statuses": ["confirmed", "conditional"], "evidence_only": ["u086", "u087", "u088"], "note": "thanh toán cả chuỗi không được là quyết định đã chốt"}
+  ]
+}

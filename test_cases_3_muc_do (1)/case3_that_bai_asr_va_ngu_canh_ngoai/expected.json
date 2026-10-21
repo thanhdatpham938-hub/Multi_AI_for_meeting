@@ -1,0 +1,35 @@
+{
+  "case": "CASE3",
+  "description": "Hợp đồng CRM, transcript ASR thô: Speaker N, mất chữ, số sai, quyết định dựa vào email/cử chỉ ngoài transcript. Đạt = không bịa và biết gắn cờ.",
+  "known_limitation": true,
+  "expect_no_confirmed": false,
+  "expect_flags_any": ["unresolved_reference"],
+  "items": [
+    {"type": "decision", "status": "confirmed", "accept_statuses": ["confirmed", "proposed", "open"], "content": "Chuyển dữ liệu 2 năm gần nhất, 3 năm còn lại lưu dạng file lưu trữ", "owner": null, "deadline": null, "condition": null, "evidence": ["u046", "u043", "u045"], "required_flags": ["authority_unclear"]},
+    {"type": "decision", "status": "deferred", "accept_statuses": ["deferred", "open"], "content": "Server đặt ở Singapore hay Việt Nam (+15% giá): chờ pháp chế", "owner": null, "deadline": null, "condition": null, "evidence": ["u032", "u030", "u031"], "required_flags": ["authority_unclear", "number_check"], "pending_on": "ý kiến pháp chế"},
+    {"type": "decision", "status": "deferred", "accept_statuses": ["deferred", "open"], "content": "Gói hỗ trợ mở rộng ngoài giờ: Speaker 1 cân nhắc thêm (không bịa giá)", "owner": null, "deadline": null, "condition": null, "evidence": ["u061", "u057", "u059"], "required_flags": ["authority_unclear"], "pending_on": "Speaker 1 cân nhắc thêm về giá gói hỗ trợ mở rộng"},
+    {"type": "decision", "status": "deferred", "accept_statuses": ["deferred", "open"], "content": "Module tích hợp tổng đài: chờ hỏi lại anh Tâm", "owner": null, "deadline": null, "condition": null, "evidence": ["u080", "u078", "u082"], "required_flags": ["authority_unclear"], "pending_on": "ý kiến anh Tâm (vắng mặt)"},
+    {"type": "decision", "status": "deferred", "accept_statuses": ["deferred", "open"], "content": "Thời hạn hợp đồng hai năm: bên bán phải hỏi lại sếp", "owner": null, "deadline": null, "condition": null, "evidence": ["u087", "u088", "u086"], "required_flags": ["authority_unclear"], "pending_on": "bên bán hỏi sếp về phương án hai năm"},
+    {"type": "decision", "status": "confirmed", "accept_statuses": ["confirmed", "proposed"], "content": "Thanh toán hai đợt: 50% khi ký, 50% khi nghiệm thu", "owner": null, "deadline": null, "condition": null, "evidence": ["u069", "u068", "u070"], "required_flags": ["authority_unclear", "number_check"]},
+    {"type": "decision", "status": "open", "accept_statuses": ["open", "proposed", "confirmed"], "content": "Chọn gói theo 'phương án trong email hôm qua' (nội dung nằm ngoài transcript, không được bịa tên gói hay giá)", "owner": null, "deadline": null, "condition": null, "evidence": ["u021", "u022", "u023"], "optional": true, "required_flags": ["authority_unclear"]},
+    {"type": "decision", "status": "open", "accept_statuses": ["open", "proposed", "confirmed"], "content": "Giá sau giảm 10% ('bốn linh năm', không rõ đơn vị, không được tự quy đổi)", "owner": null, "deadline": null, "condition": null, "evidence": ["u066", "u067", "u064"], "optional": true, "required_flags": ["authority_unclear", "number_check"]},
+    {"type": "decision", "status": "open", "accept_statuses": ["open", "proposed", "deferred"], "content": "Ký hợp đồng trong tuần này (sự thật là đã đồng ý bằng cái gật đầu, không có trong transcript; không được confirmed chỉ dựa trên lời bên bán)", "owner": null, "deadline": null, "condition": null, "evidence": ["u071", "u072", "u073"], "optional": true, "required_flags": ["authority_unclear"]},
+    {"type": "decision", "status": "open", "accept_statuses": ["open", "proposed"], "content": "Đào tạo: 1 buổi trực tiếp + 1 buổi online ('Thôi được rồi, làm luôn đi' chưa đủ rõ)", "owner": null, "deadline": null, "condition": null, "evidence": ["u050", "u051", "u052"], "optional": true, "required_flags": ["authority_unclear"]},
+
+    {"type": "action", "content": "Bên bán (Speaker 4) migrate dữ liệu xong trước 30/11 nếu nhận dữ liệu trước ngày 3", "owner": "Speaker 4", "accept_owners": ["Speaker 4", "Kiên", "bên bán"], "deadline": "30", "condition": null, "evidence": ["u037"], "required_flags": ["number_check"]},
+    {"type": "action", "content": "Bên mua gửi file dữ liệu CSV trước ngày 3 (sự thật là anh Quang/Speaker 1; ASR gán nhầm Speaker 3; không tự thêm tháng)", "owner": "Speaker 1", "accept_owners": ["Speaker 1", "Speaker 3"], "deadline": "ngày 3", "condition": null, "evidence": ["u040", "u038", "u039"], "optional": true},
+    {"type": "action", "content": "Speaker 1 hỏi bên pháp chế về server dữ liệu khách hàng", "owner": "Speaker 1", "deadline": null, "condition": null, "evidence": ["u032", "u030"]},
+    {"type": "action", "content": "Bên bán (Speaker 2) gửi mẫu thỏa thuận bảo mật", "owner": "Speaker 2", "accept_owners": ["Speaker 2", "Vân", "bên bán"], "deadline": null, "condition": null, "evidence": ["u035"]},
+    {"type": "action", "content": "Speaker 1 báo lại về tích hợp tổng đài trước ngày 10 (không tự thêm tháng)", "owner": "Speaker 1", "deadline": "ngày 10", "condition": null, "evidence": ["u082", "u081", "u080"], "required_flags": ["number_check"]},
+    {"type": "action", "content": "Speaker 2 gửi email tổng hợp các điểm sau họp", "owner": "Speaker 2", "accept_owners": ["Speaker 2", "Vân"], "deadline": null, "condition": null, "evidence": ["u103", "u104"]},
+    {"type": "action", "content": "Speaker 2 gửi hợp đồng thứ Sáu này", "owner": "Speaker 2", "accept_owners": ["Speaker 2", "Vân"], "deadline": "thứ Sáu", "condition": null, "evidence": ["u072"], "optional": true},
+
+    {"type": "request", "content": "Bên mua yêu cầu ký thỏa thuận bảo mật trước khi gửi dữ liệu khách hàng", "owner": null, "deadline": null, "condition": null, "evidence": ["u034", "u035"]},
+    {"type": "knowledge", "content": "Gói Business: ASR ghi '35 triệu/năm' (thực tế 350 triệu), tối đa 50 người dùng", "owner": null, "deadline": null, "condition": null, "evidence": ["u011", "u013"], "knowledge_scope": "project", "optional": true, "required_flags": ["number_check"]}
+  ],
+  "forbidden": [
+    {"type": "decision", "statuses": ["confirmed", "conditional"], "evidence_only": ["u083", "u084", "u085", "u086"], "note": "thời hạn hợp đồng hai năm không được confirmed"},
+    {"type": "decision", "statuses": ["confirmed", "conditional"], "evidence_only": ["u071", "u072"], "note": "ký hợp đồng không được confirmed chỉ dựa trên lời bên bán"},
+    {"type": "decision", "statuses": ["confirmed", "conditional"], "evidence_only": ["u028", "u029", "u031"], "note": "server Singapore hay Việt Nam chưa chốt, chờ pháp chế"}
+  ]
+}

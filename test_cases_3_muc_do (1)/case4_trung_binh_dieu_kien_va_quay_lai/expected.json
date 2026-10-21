@@ -1,0 +1,54 @@
+{
+  "case": "CASE4",
+  "description": "Chi nhánh Thủ Đức: điều kiện PCCC, hai lần đổi phương án A sang B, chủ đề ca tối hoãn rồi quay lại",
+  "expect_no_confirmed": false,
+  "expect_no_conflicts": true,
+  "same_topic": [
+    ["u052", "u055", "u080", "u083"]
+  ],
+  "items": [
+    {"type": "decision", "status": "conditional", "content": "Khai trương ngày 8/12", "owner": null, "deadline": null, "condition": "Có biên bản nghiệm thu PCCC trước 5/12", "evidence": ["u031", "u102"], "required_flags": ["number_check"],
+     "history_superseded": [{"content": "Khai trương 1/12", "evidence": ["u024", "u026", "u027"]}]},
+    {"type": "decision", "status": "confirmed", "content": "Khuyến mãi khai trương: mua 1 tặng 1 size M trong ba ngày đầu", "owner": null, "deadline": null, "condition": null, "evidence": ["u043"], "min_confidence": 0.8,
+     "history_superseded": [{"content": "Giảm 20% toàn menu tuần đầu", "evidence": ["u036", "u038", "u039"]}]},
+    {"type": "decision", "status": "confirmed", "content": "Thuê máy pha espresso sáu tháng, sau sáu tháng đánh giá lại", "owner": null, "deadline": null, "condition": null, "evidence": ["u071"], "min_confidence": 0.8,
+     "history_superseded": [{"content": "Mua mới máy espresso khoảng 180 triệu", "evidence": ["u063", "u064", "u068", "u069"]}]},
+    {"type": "decision", "status": "confirmed", "content": "Tuyển thêm hai bạn part-time ca tối", "owner": null, "deadline": null, "condition": null, "evidence": ["u083"], "min_confidence": 0.8},
+    {"type": "decision", "status": "deferred", "accept_statuses": ["deferred", "open"], "content": "Số lượng tờ rơi in (đề xuất 5.000 tờ): chờ Mai gửi lại con số hợp lý", "owner": null, "deadline": null, "condition": null, "evidence": ["u046", "u047"], "pending_on": "Mai gửi lại số lượng tờ rơi hợp lý"},
+    {"type": "decision", "status": "deferred", "content": "Thêm bánh mì vào menu buổi sáng", "owner": null, "deadline": null, "condition": null, "evidence": ["u078", "u077"], "pending_on": "hỏi bếp trung tâm về công suất"},
+    {"type": "decision", "status": "deferred", "content": "Mời KOL đến khai trương", "owner": null, "deadline": null, "condition": null, "evidence": ["u096"], "pending_on": "biên bản PCCC và ngày khai trương chính thức"},
+    {"type": "decision", "status": "confirmed", "content": "Giữ nguyên biển hiệu theo bản đã duyệt", "owner": null, "deadline": null, "condition": null, "evidence": ["u090"], "optional": true},
+    {"type": "decision", "status": "open", "accept_statuses": ["open", "deferred"], "content": "Ngân sách marketing khai trương (COO chưa trả lời được)", "owner": null, "deadline": null, "condition": null, "evidence": ["u099"], "optional": true, "pending_on": "số lượng tờ rơi và KOL"},
+
+    {"type": "action", "content": "Tùng liên hệ PCCC, hẹn lịch kiểm tra sớm nhất (không phải Bảo)", "owner": "Tùng", "deadline": "chiều nay", "condition": null, "evidence": ["u016", "u017"]},
+    {"type": "action", "content": "Kiểm tra lại tải điện trước khi lắp máy (chưa có người nhận)", "owner": null, "deadline": null, "condition": null, "evidence": ["u021"], "required_flags": ["missing_owner"]},
+    {"type": "action", "content": "Mai chuẩn bị kế hoạch quảng cáo theo mốc 8/12, chưa đặt cọc đến khi có biên bản", "owner": "Mai", "deadline": null, "condition": null, "evidence": ["u033", "u032"]},
+    {"type": "action", "content": "Mai xem lại số lượng tờ rơi, gửi COO con số hợp lý", "owner": "Mai", "deadline": "tuần này", "condition": null, "evidence": ["u047", "u048"]},
+    {"type": "action", "content": "Nhi gửi lịch đào tạo cho Tùng", "owner": "Nhi", "deadline": "thứ Sáu", "condition": null, "evidence": ["u060", "u061"]},
+    {"type": "action", "content": "Tùng đứng lớp buổi đào tạo đầu về quy trình mở/đóng cửa", "owner": "Tùng", "deadline": null, "condition": null, "evidence": ["u059"], "optional": true},
+    {"type": "action", "content": "Kiệt ký hợp đồng thuê máy espresso", "owner": "Kiệt", "deadline": "25/11", "condition": null, "evidence": ["u072", "u073"]},
+    {"type": "action", "content": "Hạnh hỏi bếp trung tâm về công suất làm bánh mì", "owner": "Hạnh", "deadline": null, "condition": null, "evidence": ["u078"], "optional": true},
+    {"type": "action", "content": "Nhi gửi hợp đồng cho hai bạn part-time ca tối", "owner": "Nhi", "deadline": "hôm nay", "condition": null, "evidence": ["u084"]},
+    {"type": "action", "content": "Tùng đăng ký gói nhạc bản quyền cho chi nhánh", "owner": "Tùng", "deadline": null, "condition": null, "evidence": ["u093", "u094"]},
+    {"type": "action", "content": "Nhi phỏng vấn tuyển hai vị trí pha chế còn thiếu", "owner": "Nhi", "deadline": "cuối tuần", "condition": null, "evidence": ["u051"], "optional": true},
+
+    {"type": "blocker", "content": "Chưa có biên bản nghiệm thu PCCC nên chưa được mở cửa đón khách; PCCC hẹn tuần sau mới kiểm tra", "owner": null, "deadline": null, "condition": null, "evidence": ["u011", "u012"]},
+    {"type": "knowledge", "content": "Đã giải ngân 420 triệu trên dự toán 600 triệu", "owner": null, "deadline": null, "condition": null, "evidence": ["u009"], "knowledge_scope": "project"},
+    {"type": "knowledge", "content": "Mỗi tuần lùi khai trương mất khoảng 35 triệu tiền thuê mặt bằng", "owner": null, "deadline": null, "condition": null, "evidence": ["u029"], "knowledge_scope": "project"},
+    {"type": "knowledge", "content": "Nội thất bên xưởng hứa giao ngày 20/11", "owner": null, "deadline": null, "condition": null, "evidence": ["u007"], "knowledge_scope": "ephemeral", "optional": true},
+    {"type": "knowledge", "content": "Giảm 20% cả menu thì biên lợi nhuận tuần đầu âm ~3%; mua 1 tặng 1 size M thì dương ~8%", "owner": null, "deadline": null, "condition": null, "evidence": ["u038", "u041"], "knowledge_scope": "project", "optional": true},
+    {"type": "knowledge", "content": "Đã tuyển 6/8 nhân viên, thiếu 2 pha chế; ca tối hiện có 2 người", "owner": null, "deadline": null, "condition": null, "evidence": ["u050", "u053"], "knowledge_scope": "ephemeral", "optional": true},
+    {"type": "knowledge", "content": "Đào tạo 3 ngày ở chi nhánh Quận 1 từ 24/11", "owner": null, "deadline": null, "condition": null, "evidence": ["u058"], "knowledge_scope": "project", "optional": true},
+    {"type": "knowledge", "content": "Mua máy espresso ~180 triệu, thuê ~6 triệu/tháng có bảo trì", "owner": null, "deadline": null, "condition": null, "evidence": ["u063", "u064"], "knowledge_scope": "project", "optional": true},
+    {"type": "knowledge", "content": "Hai bạn part-time thêm ~12 triệu/tháng lương, trong định mức", "owner": null, "deadline": null, "condition": null, "evidence": ["u085"], "knowledge_scope": "project", "optional": true},
+    {"type": "knowledge", "content": "Wifi và máy POS lắp ngày 28/11", "owner": null, "deadline": null, "condition": null, "evidence": ["u091"], "knowledge_scope": "ephemeral", "optional": true},
+    {"type": "knowledge", "content": "Chờ PCCC nghiệm thu thường mất gần hai tuần (kinh nghiệm chi nhánh Gò Vấp)", "owner": null, "deadline": null, "condition": null, "evidence": ["u013"], "knowledge_scope": "reusable", "optional": true}
+  ],
+  "forbidden": [
+    {"type": "decision", "statuses": ["confirmed", "conditional"], "evidence_only": ["u024", "u025"], "note": "khai trương 1/12 chỉ là đề xuất bị thay thế, không được là quyết định"},
+    {"type": "decision", "statuses": ["confirmed", "conditional"], "evidence_only": ["u036", "u037", "u038", "u039"], "note": "giảm 20% toàn menu chỉ được nằm trong history superseded"},
+    {"type": "decision", "statuses": ["confirmed", "conditional"], "evidence_only": ["u063", "u067"], "note": "mua máy espresso chỉ được nằm trong history superseded"},
+    {"type": "decision", "statuses": ["confirmed", "conditional", "deferred", "open", "proposed"], "evidence_only": ["u065", "u066"], "note": "máy một tỷ là câu đùa, câu đáp là mỉa mai, không phải quyết định"},
+    {"type": "decision", "statuses": ["confirmed", "conditional"], "evidence_only": ["u044", "u045"], "note": "Mai không có quyền chốt in 5.000 tờ rơi"}
+  ]
+}

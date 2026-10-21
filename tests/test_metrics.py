@@ -39,6 +39,8 @@ def oracle_result(n: int) -> RunResult:
                           deadline=exp.get("deadline"), evidence=exp["evidence"], history=history,
                           confidence=0.5, **labels))
     items, _ = apply_rules(items, utts, meta)
+    if items and answer.get("expect_flags_any"):  # a flag the oracle Agent 3 would raise (set after rules)
+        items[0].flags = [*items[0].flags, answer["expect_flags_any"][0]]
     topic = Topic(topic_id="t01", title="T", utterance_ids=[u.id for u in utts])
     return RunResult(run_id="x", source_file=f"tc{n}", model_light="l", model_strong="s", prompt_versions={},
                      utterances=utts, topics=[topic], items=items, meta=meta or MeetingMeta())

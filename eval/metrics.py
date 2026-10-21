@@ -6,6 +6,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
+from meeting_extractor.conflicts import conflict_pairs
 from meeting_extractor.models import Item, RunResult, Status
 
 THRESHOLDS = {
@@ -15,6 +16,13 @@ THRESHOLDS = {
     "citation_accuracy": ("≥", 0.95),
     "fabricated_fields": ("≤", 0),
     "stability_change_rate": ("≤", 0.10),
+    # Mission 3 metrics (thresholds from PLAN_MISSION_3.md section 2)
+    "unresolved_status_accuracy": ("≥", 0.80),
+    "quote_validity": ("≥", 0.95),
+    "field_provenance": ("≥", 1.0),
+    "knowledge_scope_accuracy": ("≥", 0.75),
+    "unflagged_conflicts": ("≤", 0),
+    "expected_flags_met": ("≥", 1.0),
 }
 LABELS = {
     "false_confirm_rate": "Tỷ lệ chốt nhầm",
@@ -23,7 +31,23 @@ LABELS = {
     "citation_accuracy": "Độ chính xác trích dẫn",
     "fabricated_fields": "Owner/deadline bịa",
     "stability_change_rate": "Độ ổn định (đổi trạng thái)",
+    "unresolved_status_accuracy": "Trạng thái đúng cho mục chưa chốt",
+    "quote_validity": "Đoạn trích kiểm chứng được",
+    "field_provenance": "Owner/deadline có câu nguồn riêng",
+    "knowledge_scope_accuracy": "Phạm vi tri thức đúng",
+    "unflagged_conflicts": "Quyết định mâu thuẫn không gắn cờ",
+    "expected_flags_met": "Cờ kỳ vọng có mặt (expect_flags_any)",
 }
+OLD_METRICS = ("false_confirm_rate", "decision_recall", "action_precision", "citation_accuracy", "fabricated_fields")
+NEW_METRICS = ("unresolved_status_accuracy", "quote_validity", "field_provenance", "knowledge_scope_accuracy",
+               "unflagged_conflicts", "expected_flags_met")
+COUNT_METRICS = ("fabricated_fields", "unflagged_conflicts")  # printed as integers, not percentages
+SMALL_SAMPLE = 10
+UNRESOLVED_STATUSES = {"deferred", "conditional", "open"}
+M3_COUNT_KEYS = (
+    "unres_total", "unres_ok", "quote_total", "quote_ok", "prov_total", "prov_ok",
+    "scope_total", "scope_ok", "decisions_total", "conflicts_unflagged", "flags_expected", "flags_met",
+)
 
 # (expected_content, system_content) -> bool ; usually a small LLM yes/no judge
 ContentJudge = Callable[[str, str], bool]
@@ -44,6 +68,7 @@ class CaseReport:
     unmatched_items: list[Item]
     counts: dict[str, int] = field(default_factory=dict)
     errors: list[str] = field(default_factory=list)
+    notes: list[str] = field(default_factory=list)  # informational lines, not case errors
 
     @property
     def passed(self) -> bool:
@@ -54,6 +79,16 @@ def accepted_statuses(exp: dict[str, Any]) -> set[str]:
     if exp.get("accept_statuses"):
         return set(exp["accept_statuses"])
     return {exp["status"]} if exp.get("status") else set()
+
+
+def owner_accepted(exp: dict[str, Any], owner: str | None) -> bool:
+    """With `accept_owners`: owner matches any listed value (case-insensitive); null in the list accepts no owner."""
+    if "accept_owners" not in exp:
+        return False
+    allowed = exp["accept_owners"] or []
+    if not (owner or "").strip():
+        return None in allowed
+    return (owner or "").strip().lower() in {a.strip().lower() for a in allowed if isinstance(a, str)}
 
 
 def match_items(expected: list[dict[str, Any]], items: list[Item], judge: ContentJudge | None = None) -> list[Match]:
@@ -95,7 +130,7 @@ def evaluate_case(result: RunResult, answer: dict[str, Any], judge: ContentJudge
     rep = CaseReport(answer.get("case", result.source_file), bool(answer.get("known_limitation")), matches, unmatched)
     c = rep.counts = {k: 0 for k in (
         "confirmed_total", "confirmed_wrong", "exp_decisions", "exp_decisions_matched",
-        "actions_total", "actions_matched", "matched_total", "matched_cited", "fabricated")}
+        "actions_total", "actions_matched", "matched_total", "matched_cited", "fabricated", *M3_COUNT_KEYS)}
 
     # --- false confirmations
     for it in items:
@@ -124,7 +159,7 @@ def evaluate_case(result: RunResult, answer: dict[str, Any], judge: ContentJudge
         else:
             rep.errors.append(f"Trích dẫn lệch: \"{it.content}\" evidence={it.evidence}, đáp án {exp['evidence']}")
         for fld in ("owner", "deadline"):
-            if getattr(it, fld) and not exp.get(fld):
+            if getattr(it, fld) and not exp.get(fld) and not (fld == "owner" and owner_accepted(exp, it.owner)):
                 c["fabricated"] += 1
                 rep.errors.append(f"{fld} bịa: \"{it.content}\" {fld}={getattr(it, fld)!r}")
         _check_item_details(rep, exp, it)
@@ -137,6 +172,7 @@ def evaluate_case(result: RunResult, answer: dict[str, Any], judge: ContentJudge
             rep.errors.append(f"Action thừa: [{it.item_id}] \"{it.content}\" owner={it.owner}")
 
     _check_case_rules(rep, result, answer, items)
+    _collect_m3_counts(rep, result, answer, items)
     return rep
 
 
@@ -145,7 +181,10 @@ def _check_item_details(rep: CaseReport, exp: dict[str, Any], it: Item) -> None:
     statuses = accepted_statuses(exp)
     if statuses and (it.status.value if it.status else None) not in statuses:
         rep.errors.append(f"Sai trạng thái {label}: {it.status.value if it.status else None}, đáp án {sorted(statuses)}")
-    if exp.get("owner") and (it.owner or "").strip().lower() != exp["owner"].lower():
+    if "accept_owners" in exp:
+        if not owner_accepted(exp, it.owner):
+            rep.errors.append(f"Sai owner {label}: {it.owner!r}, đáp án chấp nhận {exp['accept_owners']}")
+    elif exp.get("owner") and (it.owner or "").strip().lower() != exp["owner"].lower():
         rep.errors.append(f"Sai owner {label}: {it.owner!r}, đáp án {exp['owner']!r}")
     if exp.get("deadline") and exp["deadline"].lower() not in (it.deadline or "").lower():
         rep.errors.append(f"Sai deadline {label}: {it.deadline!r}, đáp án {exp['deadline']!r}")
@@ -193,6 +232,116 @@ def aggregate(reports: list[CaseReport]) -> dict[str, float]:
         "citation_accuracy": ratio("matched_cited", "matched_total", 1.0),
         "fabricated_fields": float(tot.get("fabricated", 0)),
     }
+
+
+
+# ---------------------------------------------------------------- Mission 3 metrics
+
+
+def _norm(text: str) -> str:
+    return " ".join(text.split()).lower()
+
+
+def invalid_quotes(item: Item, utterances: dict[str, str]) -> list[str]:
+    """IDs whose quote is not a substring of the cited utterance (whitespace/case-insensitive)."""
+    quotes = getattr(item, "evidence_quotes", None) or {}
+    bad = []
+    for uid, quote in quotes.items():
+        q = _norm(str(quote))
+        if not q or uid not in utterances or q not in _norm(utterances[uid]):
+            bad.append(uid)
+    return bad
+
+
+def _collect_m3_counts(rep: CaseReport, result: RunResult, answer: dict[str, Any], items: list[Item]) -> None:
+    c = rep.counts
+    texts = {u.id: u.text for u in result.utterances}
+    for m in rep.matches:
+        exp, it = m.expected, m.item
+        if it is None:
+            continue
+        statuses = accepted_statuses(exp)
+        if statuses and statuses <= UNRESOLVED_STATUSES:
+            c["unres_total"] += 1
+            c["unres_ok"] += int(bool(it.status and it.status.value in statuses))
+        if it.type.value == "knowledge" and exp.get("knowledge_scope"):
+            c["scope_total"] += 1
+            c["scope_ok"] += int(getattr(it, "knowledge_scope", None) == exp["knowledge_scope"])
+    for it in items:
+        if getattr(it, "evidence_quotes", None):
+            c["quote_total"] += 1
+            bad = invalid_quotes(it, texts)
+            c["quote_ok"] += int(not bad)
+            if bad:
+                rep.notes.append(f"Đoạn trích không khớp câu {bad}: [{it.item_id}] \"{it.content}\"")
+        provenance = getattr(it, "field_evidence", None) or {}
+        for fld in ("owner", "deadline"):
+            if getattr(it, fld):
+                c["prov_total"] += 1
+                c["prov_ok"] += int(bool(provenance.get(fld)))
+    _check_conflicts_and_flags(rep, answer, items)
+
+
+def _check_conflicts_and_flags(rep: CaseReport, answer: dict[str, Any], items: list[Item]) -> None:
+    c = rep.counts
+    c["decisions_total"] = sum(1 for i in items if i.type.value == "decision")
+    pairs = conflict_pairs(items)
+    for a, b in pairs:
+        if "conflicting_decision" in a.flags or "conflicting_decision" in b.flags:
+            continue
+        c["conflicts_unflagged"] += 1
+        rep.notes.append(f"Mâu thuẫn không gắn cờ: [{a.item_id}] \"{a.content}\" vs [{b.item_id}] \"{b.content}\"")
+    unflagged = sum(1 for a, b in pairs if "conflicting_decision" not in a.flags and "conflicting_decision" not in b.flags)
+    if answer.get("expect_no_conflicts") and unflagged:
+        rep.errors.append(f"Ca này không được có quyết định mâu thuẫn chưa gắn cờ ({unflagged} cặp)")
+    wanted = answer.get("expect_flags_any") or []
+    if wanted:
+        c["flags_expected"] += 1
+        if any(f in i.flags for i in items for f in wanted):
+            c["flags_met"] += 1
+        else:
+            rep.errors.append(f"Không có mục nào mang cờ nào trong {wanted}")
+
+
+Metric = tuple[float | None, int]  # (value, or None = not applicable; sample size)
+
+
+def aggregate_detail(reports: list[CaseReport]) -> dict[str, Metric]:
+    """Old five metrics plus the Mission 3 ones, each with its sample size; None = no samples."""
+    scored = [r for r in reports if not r.known_limitation]
+
+    def total(rs: list[CaseReport], key: str) -> int:
+        return sum(r.counts.get(key, 0) for r in rs)
+
+    def ratio(num: str, den: str, rs: list[CaseReport] = scored) -> Metric:
+        n = total(rs, den)
+        return (total(rs, num) / n if n else None), n
+
+    def count(num: str, den: str) -> Metric:
+        n = total(scored, den)
+        return (float(total(scored, num)) if n else None), n
+
+    return {
+        "false_confirm_rate": ratio("confirmed_wrong", "confirmed_total"),
+        "decision_recall": ratio("exp_decisions_matched", "exp_decisions"),
+        "action_precision": ratio("actions_matched", "actions_total"),
+        "citation_accuracy": ratio("matched_cited", "matched_total"),
+        "fabricated_fields": count("fabricated", "matched_total"),
+        "unresolved_status_accuracy": ratio("unres_ok", "unres_total"),
+        "quote_validity": ratio("quote_ok", "quote_total"),
+        "field_provenance": ratio("prov_ok", "prov_total"),
+        "knowledge_scope_accuracy": ratio("scope_ok", "scope_total"),
+        "unflagged_conflicts": count("conflicts_unflagged", "decisions_total"),
+        "expected_flags_met": ratio("flags_met", "flags_expected", reports),  # all cases, incl. known limitations
+    }
+
+
+def format_metric(name: str, value: float | None, n: int) -> str:
+    """Value with its sample size; `không áp dụng` without samples, `(tham khảo)` below SMALL_SAMPLE."""
+    if value is None:
+        return "không áp dụng (0 mẫu)"
+    text = f"{value:.0f}" if name in COUNT_METRICS else f"{value:.1%}"
+    return f"{text} (n={n}){' (tham khảo)' if n < SMALL_SAMPLE else ''}"
 
 
 def stability(runs_per_case: dict[str, list[list[Match]]]) -> tuple[float, list[str]]:

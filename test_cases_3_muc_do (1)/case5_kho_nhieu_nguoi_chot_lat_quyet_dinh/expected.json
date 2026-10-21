@@ -1,0 +1,56 @@
+{
+  "case": "CASE5",
+  "description": "ShopNhanh: nhiều người có quyền chốt, quyết định bị lật lại, CEO vào muộn",
+  "expect_no_confirmed": false,
+  "expect_no_conflicts": true,
+  "same_topic": [
+    ["u041", "u043", "u082", "u083"]
+  ],
+  "items": [
+    {"type": "decision", "status": "confirmed", "content": "Khắc phục bằng hotfix: tăng pool kết nối và giới hạn worker, không rollback", "owner": null, "deadline": null, "condition": null, "evidence": ["u031", "u105"], "min_confidence": 0.7,
+     "history_superseded": [{"content": "Rollback về bản 3.2", "evidence": ["u022", "u025", "u027", "u029"]}]},
+    {"type": "decision", "status": "confirmed", "content": "Flash sale 0 giờ vẫn chạy, giới hạn 5.000 đơn mỗi giờ, bắt buộc có hàng đợi ở trang thanh toán", "owner": null, "deadline": null, "condition": null, "evidence": ["u068", "u069", "u106"], "min_confidence": 0.7,
+     "history_superseded": [
+       {"content": "Flash sale giới hạn 10.000 đơn mỗi giờ", "evidence": ["u052", "u054"]},
+       {"content": "Hoãn flash sale 0 giờ", "evidence": ["u053", "u066"]}
+     ]},
+    {"type": "decision", "status": "confirmed", "content": "Tặng voucher 50 nghìn cho mọi đơn lỗi tối qua, không cần chờ tài chính", "owner": null, "deadline": null, "condition": null, "evidence": ["u083", "u107"], "min_confidence": 0.7, "required_flags": ["number_check"]},
+    {"type": "decision", "status": "confirmed", "content": "Đóng băng deploy từ 25/11 đến hết 30/11, chỉ cho phép hotfix khẩn cấp", "owner": null, "deadline": null, "condition": null, "evidence": ["u099", "u096"], "min_confidence": 0.7, "required_flags": ["number_check"]},
+    {"type": "decision", "status": "deferred", "content": "Tăng gấp đôi số server tuần Black Friday (~80 triệu)", "owner": null, "deadline": null, "condition": null, "evidence": ["u079", "u078"], "required_flags": ["number_check"], "pending_on": "kết quả load test của Duy vào thứ Tư"},
+    {"type": "decision", "status": "open", "content": "Có thông báo sự cố cho đối tác ngân hàng hay không", "owner": null, "deadline": null, "condition": null, "evidence": ["u089", "u094", "u092"], "optional": true, "required_flags": ["no_closing_signal"]},
+    {"type": "decision", "status": "deferred", "content": "Làm trang trạng thái hệ thống công khai", "owner": null, "deadline": null, "condition": null, "evidence": ["u103", "u102"], "pending_on": "sau Black Friday"},
+
+    {"type": "action", "content": "Phúc làm hotfix pool kết nối và giới hạn worker, deploy", "owner": "Phúc", "deadline": "10 giờ sáng mai", "condition": null, "evidence": ["u031"]},
+    {"type": "action", "content": "Duy test hotfix trên staging, có test tải", "owner": "Duy", "deadline": "tối nay", "condition": null, "evidence": ["u033", "u034"]},
+    {"type": "action", "content": "Thảo chuyển cảnh báo thanh toán sang kênh trực mới, gắn on-call qua điện thoại", "owner": "Thảo", "deadline": "hôm nay", "condition": null, "evidence": ["u035", "u036"]},
+    {"type": "action", "content": "Phúc viết báo cáo postmortem (không phải Thảo)", "owner": "Phúc", "deadline": "thứ Sáu", "condition": null, "evidence": ["u038", "u039"]},
+    {"type": "action", "content": "Thảo review phần hạ tầng của postmortem", "owner": "Thảo", "deadline": null, "condition": null, "evidence": ["u038"], "optional": true},
+    {"type": "action", "content": "My soạn email xin lỗi khách, gắn mã voucher", "owner": "My", "deadline": null, "condition": null, "evidence": ["u048", "u085", "u086", "u049"]},
+    {"type": "action", "content": "Linh duyệt email xin lỗi trước khi gửi", "owner": "Linh", "deadline": "5 giờ chiều", "condition": null, "evidence": ["u049"], "optional": true},
+    {"type": "action", "content": "Duy chạy load test Black Friday, gửi kết quả vào nhóm", "owner": "Duy", "deadline": "thứ Tư", "condition": null, "evidence": ["u058", "u059"]},
+    {"type": "action", "content": "Tú làm hàng đợi ở trang thanh toán (không phải Phúc)", "owner": "Tú", "deadline": "24/11", "condition": null, "evidence": ["u074", "u076"]},
+    {"type": "action", "content": "Phúc review hàng đợi", "owner": "Phúc", "deadline": null, "condition": null, "evidence": ["u074"], "optional": true},
+    {"type": "action", "content": "Quân giao việc hàng đợi cho Tú sau họp", "owner": "Quân", "deadline": "sau họp", "condition": null, "evidence": ["u074"], "optional": true},
+    {"type": "action", "content": "Hòa báo anh Sơn bên tài chính về khoản 160 triệu voucher", "owner": "Hòa", "deadline": null, "condition": null, "evidence": ["u084"]},
+    {"type": "action", "content": "My gọi điện xin lỗi 214 khách bị trừ tiền mà không có đơn", "owner": "My", "deadline": "hai ngày", "condition": null, "evidence": ["u087", "u088"]},
+
+    {"type": "knowledge", "content": "Sự cố 20:12 đến 20:59 (47 phút), tỷ lệ lỗi đỉnh 38%, khoảng 3.200 đơn thanh toán thất bại", "owner": null, "deadline": null, "condition": null, "evidence": ["u007", "u008"], "knowledge_scope": "ephemeral"},
+    {"type": "knowledge", "content": "CSKH nhận hơn 900 cuộc gọi/tin nhắn; 214 khách bị trừ tiền mà không có đơn, ngân hàng hoàn tự động 3 đến 5 ngày", "owner": null, "deadline": null, "condition": null, "evidence": ["u009", "u011"], "knowledge_scope": "ephemeral", "optional": true},
+    {"type": "knowledge", "content": "Nguyên nhân gốc: bản 3.3 tăng worker từ 8 lên 24 nhưng pool kết nối giữ 50, cạn kết nối lúc cao điểm", "owner": null, "deadline": null, "condition": null, "evidence": ["u013", "u014"], "knowledge_scope": "reusable"},
+    {"type": "knowledge", "content": "Cảnh báo bắn 20:15 vào kênh cũ không ai trực, 20:40 mới phát hiện (mất 25 phút)", "owner": null, "deadline": null, "condition": null, "evidence": ["u015", "u016"], "knowledge_scope": "ephemeral", "optional": true},
+    {"type": "knowledge", "content": "Bản 3.3 không được test tải", "owner": null, "deadline": null, "condition": null, "evidence": ["u018", "u019"], "knowledge_scope": "ephemeral", "optional": true},
+    {"type": "knowledge", "content": "Flash sale 0 giờ năm ngoái mang về 30% doanh thu cả ngày", "owner": null, "deadline": null, "condition": null, "evidence": ["u065"], "knowledge_scope": "project"},
+    {"type": "knowledge", "content": "Có hàng đợi thì hệ thống chịu an toàn khoảng 5.000 đơn mỗi giờ", "owner": null, "deadline": null, "condition": null, "evidence": ["u067"], "knowledge_scope": "project", "optional": true},
+    {"type": "knowledge", "content": "Banner đếm ngược chỉ là frontend, deploy trước 25/11 được", "owner": null, "deadline": null, "condition": null, "evidence": ["u098"], "knowledge_scope": "project", "optional": true}
+  ],
+  "forbidden": [
+    {"type": "decision", "statuses": ["confirmed", "conditional"], "evidence_only": ["u022", "u024", "u025", "u026"], "note": "'Chốt rollback về 3.2' bị lật lại ngay, rollback chỉ được nằm trong history superseded"},
+    {"type": "decision", "statuses": ["confirmed", "conditional"], "evidence_only": ["u052", "u054", "u060"], "note": "flash sale 10.000 đơn/giờ bị CEO thay thế"},
+    {"type": "decision", "statuses": ["confirmed", "conditional"], "evidence_only": ["u053", "u061", "u063", "u066"], "note": "hoãn flash sale 0 giờ bị CEO thay thế"},
+    {"type": "decision", "statuses": ["conditional"], "evidence_only": ["u041", "u042", "u043", "u044", "u046"], "note": "voucher không được dừng ở conditional, CEO đã duyệt không điều kiện ở u083"},
+    {"type": "decision", "statuses": ["confirmed", "conditional"], "evidence_only": ["u055", "u056"], "note": "tăng gấp đôi server không được confirmed; 'giả sử traffic gấp ba' là giả định"},
+    {"type": "decision", "statuses": ["confirmed", "conditional"], "evidence_only": ["u089", "u090", "u091", "u092", "u093"], "note": "thông báo cho ngân hàng chưa kết luận, không được confirmed"},
+    {"type": "decision", "statuses": ["confirmed", "conditional", "deferred", "open", "proposed"], "evidence_only": ["u045"], "note": "'Hôm trước anh Hòa bảo…' là câu thuật lại, không phải quyết định"},
+    {"type": "decision", "statuses": ["confirmed", "conditional", "deferred", "open", "proposed"], "evidence_only": ["u020"], "note": "'sập 47 phút, hay thật' là câu mỉa mai"}
+  ]
+}

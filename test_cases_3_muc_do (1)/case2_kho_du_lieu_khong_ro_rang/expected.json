@@ -1,0 +1,61 @@
+{
+  "case": "CASE2",
+  "description": "TeaGo: kênh đổi nhiều lần, người không có quyền nói chốt, đại từ trỏ xa, chốt rồi hoãn",
+  "expect_no_confirmed": false,
+  "expect_no_conflicts": true,
+  "same_topic": [
+    ["u008", "u017", "u120", "u124", "u126"],
+    ["u030", "u034", "u131", "u132"]
+  ],
+  "items": [
+    {"type": "decision", "status": "confirmed", "content": "Kênh quảng cáo số: chạy cả TikTok và Facebook, TikTok 70% / Facebook 30%", "owner": null, "deadline": null, "condition": null, "evidence": ["u126", "u124", "u136"], "min_confidence": 0.7, "required_flags": ["number_check"],
+     "history_superseded": [
+       {"content": "Chỉ chạy TikTok", "evidence": ["u008", "u012"]},
+       {"content": "Chạy Facebook trước", "evidence": ["u017"]}
+     ]},
+    {"type": "decision", "status": "confirmed", "content": "Sampling ở Coopmart (Big C bị loại vì phí cao gấp đôi)", "owner": null, "deadline": null, "condition": null, "evidence": ["u132", "u131"]},
+    {"type": "decision", "status": "confirmed", "content": "Thuê freelancer dựng video, chi phí lấy từ ngân sách quảng cáo số", "owner": null, "deadline": null, "condition": null, "evidence": ["u129", "u128"]},
+    {"type": "decision", "status": "confirmed", "content": "Làm trang đích đơn giản có nút tìm đại lý (hỏi IT trước, bận thì thuê ngoài)", "owner": null, "deadline": null, "condition": null, "evidence": ["u092", "u094"]},
+    {"type": "decision", "status": "confirmed", "accept_statuses": ["confirmed", "proposed"], "content": "Content ưu tiên vị ô long", "owner": null, "deadline": null, "condition": null, "evidence": ["u110", "u109"]},
+    {"type": "decision", "status": "deferred", "accept_statuses": ["deferred", "open"], "content": "Mời KOL Mai Chi: Phương hoãn để xem báo giá và số liệu tương tác", "owner": null, "deadline": null, "condition": null, "evidence": ["u024", "u022"], "pending_on": "báo giá chi tiết và số liệu tương tác của Mai Chi"},
+    {"type": "decision", "status": "conditional", "content": "Làm thêm biển quảng cáo ngoài trời (OOH) 200 triệu", "owner": null, "deadline": null, "condition": "Bên tài chính duyệt thêm 200 triệu", "evidence": ["u044"], "required_flags": ["number_check"]},
+    {"type": "decision", "status": "deferred", "content": "Giá bán lẻ 28 nghìn/chai", "owner": null, "deadline": null, "condition": null, "evidence": ["u079", "u077"], "required_flags": ["number_check"], "pending_on": "họp riêng tuần sau với Sales và Finance"},
+    {"type": "decision", "status": "open", "accept_statuses": ["open", "proposed"], "content": "Ngày ra mắt 5/12", "owner": null, "deadline": null, "condition": null, "evidence": ["u057", "u051", "u053"], "required_flags": ["no_closing_signal"]},
+    {"type": "decision", "status": "deferred", "content": "Sự kiện ra mắt mời báo chí 50 người", "owner": null, "deadline": null, "condition": null, "evidence": ["u101", "u098"], "pending_on": "có ngày ra mắt"},
+    {"type": "decision", "status": "confirmed", "content": "Không làm khảo sát vị trước ra mắt", "owner": null, "deadline": null, "condition": null, "evidence": ["u107"], "optional": true},
+
+    {"type": "action", "content": "Khoa xin số liệu tương tác của Mai Chi từ bên quản lý", "owner": "Khoa", "deadline": null, "condition": null, "evidence": ["u026"]},
+    {"type": "action", "content": "Hà hỏi chuỗi siêu thị phí mặt bằng sampling", "owner": "Hà", "deadline": null, "condition": null, "evidence": ["u033", "u034"], "optional": true},
+    {"type": "action", "content": "Khoa gửi đề xuất OOH chi tiết (vị trí, báo giá) cho Bình", "owner": "Khoa", "deadline": "tuần này", "condition": null, "evidence": ["u048", "u047"]},
+    {"type": "action", "content": "Bình trình đề xuất OOH lên giám đốc tài chính", "owner": "Bình", "deadline": null, "condition": null, "evidence": ["u047"]},
+    {"type": "action", "content": "Ngọc lên kịch bản series 'một ngày với TeaGo' (~10 tập)", "owner": "Ngọc", "deadline": "tuần sau", "condition": null, "evidence": ["u065", "u137"]},
+    {"type": "action", "content": "Viết brief gửi agency quay video (chưa có người nhận, không gán cho Tuấn)", "owner": null, "deadline": null, "condition": null, "evidence": ["u069", "u070", "u071"], "required_flags": ["missing_owner"]},
+    {"type": "action", "content": "Bình chuẩn bị bảng tính biên lợi nhuận theo hai mức giá", "owner": "Bình", "deadline": null, "condition": null, "evidence": ["u080", "u081"]},
+    {"type": "action", "content": "Khoa báo bên in bao bì dùng logo xanh lá", "owner": "Khoa", "deadline": null, "condition": null, "evidence": ["u061", "u060"]},
+    {"type": "action", "content": "Hà đề xuất chương trình khuyến mãi cho đại lý, gửi Phương duyệt", "owner": "Hà", "deadline": "đầu tuần sau", "condition": null, "evidence": ["u104", "u105"]},
+    {"type": "action", "content": "Tuấn gửi Bình mức giảm giá dự kiến cho mã theo kênh", "owner": "Tuấn", "deadline": null, "condition": null, "evidence": ["u112", "u113"]},
+    {"type": "action", "content": "Khoa chuyển báo giá in bao bì sang bộ phận sản xuất", "owner": "Khoa", "deadline": null, "condition": null, "evidence": ["u116"]},
+    {"type": "action", "content": "Hà gửi Bình hợp đồng Coopmart để thanh toán trước", "owner": "Hà", "deadline": "tuần sau", "condition": null, "evidence": ["u134", "u135"]},
+    {"type": "action", "content": "Hỏi IT dựng trang đích, IT bận thì thuê ngoài", "owner": null, "accept_owners": ["Tuấn", null], "deadline": null, "condition": null, "evidence": ["u094", "u093"], "optional": true},
+    {"type": "action", "content": "Ngọc làm bài đăng giới thiệu ba vị, chạy trước ra mắt 1 tuần", "owner": "Ngọc", "deadline": null, "condition": null, "evidence": ["u067", "u068"]},
+
+    {"type": "blocker", "content": "OOH vượt ngân sách, Finance không duyệt được, phải lên giám đốc tài chính", "owner": null, "deadline": null, "condition": null, "evidence": ["u043"]},
+    {"type": "open_issue", "content": "Chưa chắc nhà máy giao lô đầu kịp cuối tháng 11; lần trước trễ cả tuần", "owner": null, "deadline": null, "condition": null, "evidence": ["u054", "u055"], "optional": true},
+    {"type": "request", "content": "Ngọc cần thêm một người dựng video nếu chạy cả hai kênh", "owner": null, "deadline": null, "condition": null, "evidence": ["u123"]},
+    {"type": "knowledge", "content": "Ngân sách đã duyệt 500 triệu (chưa gồm in bao bì); phân bổ tạm: quảng cáo số 250, KOL 100, sampling 80", "owner": null, "deadline": null, "condition": null, "evidence": ["u036", "u038"], "knowledge_scope": "project"},
+    {"type": "knowledge", "content": "Đối thủ chạy TikTok tháng trước 3 triệu lượt xem, Facebook 400 nghìn; đơn qua mã giảm giá từ TikTok gấp đôi", "owner": null, "deadline": null, "condition": null, "evidence": ["u120", "u121"], "knowledge_scope": "project"},
+    {"type": "knowledge", "content": "Bán 25 nghìn thì biên lợi nhuận đại lý khoảng 12%", "owner": null, "deadline": null, "condition": null, "evidence": ["u075"], "knowledge_scope": "project", "optional": true},
+    {"type": "knowledge", "content": "Chào thử 12 đại lý: ô long được thích nhất, matcha thứ hai", "owner": null, "deadline": null, "condition": null, "evidence": ["u006", "u108"], "knowledge_scope": "project", "optional": true},
+    {"type": "knowledge", "content": "Logo mới đã duyệt, bản màu xanh lá", "owner": null, "deadline": null, "condition": null, "evidence": ["u060"], "knowledge_scope": "project", "optional": true},
+    {"type": "knowledge", "content": "In 100 nghìn vỏ chai giá 180 triệu, ngoài ngân sách ra mắt, bộ phận sản xuất chịu", "owner": null, "deadline": null, "condition": null, "evidence": ["u114", "u115"], "knowledge_scope": "project", "optional": true}
+  ],
+  "forbidden": [
+    {"type": "decision", "statuses": ["confirmed", "conditional"], "evidence_only": ["u008", "u009", "u012"], "note": "chỉ chạy TikTok không được là quyết định"},
+    {"type": "decision", "statuses": ["confirmed", "conditional"], "evidence_only": ["u017", "u018", "u019"], "note": "'cứ Facebook trước đi' không phải quyết định cuối về kênh"},
+    {"type": "decision", "statuses": ["confirmed", "conditional"], "evidence_only": ["u022", "u023"], "note": "Khoa không có quyền chốt mời Mai Chi"},
+    {"type": "decision", "statuses": ["confirmed"], "evidence_only": ["u041", "u042", "u043", "u044", "u045"], "note": "OOH chỉ được conditional, câu 'Ừ hay quá' là mỉa mai"},
+    {"type": "decision", "statuses": ["confirmed", "conditional"], "evidence_only": ["u074", "u076", "u077", "u078"], "note": "'Chắc 28 thôi' không phải chốt giá, Phương rút lại ở u079"},
+    {"type": "decision", "statuses": ["confirmed", "conditional"], "evidence_only": ["u050", "u051", "u052", "u053"], "note": "'Chắc được' và 'Ừ' không phải chốt ngày ra mắt 5/12"},
+    {"type": "decision", "statuses": ["confirmed", "conditional", "deferred", "open", "proposed"], "evidence_only": ["u027", "u028", "u029"], "note": "mời Sơn Tùng là câu đùa, không phải quyết định"}
+  ]
+}
