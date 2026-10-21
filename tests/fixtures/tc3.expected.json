@@ -12,7 +12,7 @@
       "deadline": null,
       "condition": null,
       "evidence": ["u019", "u020"],
-      "history_superseded": [{"content": "Ra mắt beta ngày 1/11", "evidence": ["u003", "u004"]}]
+      "history_superseded": [{"content": "Ra mắt beta ngày 1/11", "evidence": ["u003", "u004", "u019"]}]
     },
     {
       "type": "decision",
