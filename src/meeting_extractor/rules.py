@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import re
 
+from .confidence import apply_cap, closer_status, compute_confidence, load_weights
 from .models import VALID_FLAGS, Item, ItemType, MeetingMeta, Status, Utterance
-from .parsing import base_speaker_name, is_anonymous_speaker
+from .parsing import base_speaker_name
 
 LOW_CONFIDENCE = 0.7
-AUTHORITY_CAP = 0.6
 
 ID_PREFIX = {
     ItemType.decision: "d",
@@ -64,12 +64,18 @@ def _deadline_supported(deadline: str, evidence: list[Utterance]) -> bool:
     return bool(d) and any(d in _norm(u.text) for u in evidence)
 
 
-def _can_decide(speaker: str, meta: MeetingMeta) -> bool:
-    name = _norm(base_speaker_name(speaker))
-    for p in meta.participants:
-        if _norm(p.name) == name or _norm(p.name) == _norm(speaker):
-            return p.can_decide
-    return False
+def _score(item: Item, utterances: list[Utterance], meta: MeetingMeta | None) -> None:
+    """Formula first, then hard caps (recorded in the breakdown)."""
+    w = load_weights()
+    score, breakdown = compute_confidence(item, utterances, meta)
+    if "authority_unclear" in item.flags:
+        score = apply_cap(score, breakdown, "cap_authority", w["cap_authority"])
+    if "verify_failed" in item.flags:
+        score = apply_cap(score, breakdown, "cap_verify_failed", w["cap_verify_failed"])
+    if "tracker_failed" in item.flags:
+        score = apply_cap(score, breakdown, "cap_tracker_failed", w["cap_tracker_failed"])
+    item.confidence = score
+    item.confidence_breakdown = breakdown
 
 
 def apply_rules(
@@ -83,7 +89,8 @@ def apply_rules(
 
     for original in items:
         item = original.model_copy(deep=True)
-        item.flags = [f for f in dict.fromkeys(item.flags) if f in VALID_FLAGS]
+        # low_confidence is recomputed below, so a stale copy must not survive a second run.
+        item.flags = [f for f in dict.fromkeys(item.flags) if f in VALID_FLAGS and f != "low_confidence"]
 
         # Rule 1: every cited utterance id must exist.
         missing = [eid for eid in _all_evidence_ids(item) if eid not in by_id]
@@ -108,14 +115,9 @@ def apply_rules(
         if has_number(item.content) or (item.condition and has_number(item.condition)):
             _add_flag(item, "number_check")
 
-        # Rule 5: who closed the decision?
-        if item.type == ItemType.decision:
-            closer = evidence[-1].speaker
-            anonymous = is_anonymous_speaker(closer)
-            no_right = bool(meta and meta.participants) and not _can_decide(closer, meta)
-            if anonymous or no_right:
-                _add_flag(item, "authority_unclear")
-                item.confidence = min(item.confidence, AUTHORITY_CAP)
+        # Rule 5: who closed the decision? (the confidence cap for it is applied in _score)
+        if item.type == ItemType.decision and closer_status(evidence[-1].speaker, meta) == "cannot":
+            _add_flag(item, "authority_unclear")
 
         # Rule 6: conditional without a condition is just open.
         if item.status == Status.conditional and not (item.condition or "").strip():
@@ -123,7 +125,8 @@ def apply_rules(
             item.status = Status.open
             item.condition = None
 
-        # Rule 7: low confidence.
+        # Rule 7: confidence = formula, then hard caps, then the low_confidence flag.
+        _score(item, utterances, meta)
         if item.confidence < LOW_CONFIDENCE:
             _add_flag(item, "low_confidence")
 

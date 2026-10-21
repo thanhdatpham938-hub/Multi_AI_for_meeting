@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 from meeting_extractor.models import HistoryEntry, Item, MeetingMeta, Participant, Status
 from meeting_extractor.parsing import parse_file
 from meeting_extractor.rules import apply_rules, has_number
@@ -13,7 +15,8 @@ META = MeetingMeta(participants=[Participant(name="Hùng", role="PM", can_decide
 
 def mk(**kw) -> Item:
     base = dict(item_id="", type="decision", topic_id="t01", topic="T", content="Dùng AWS",
-                status="confirmed", evidence=["u019"], confidence=0.9)
+                status="confirmed", evidence=["u019"], confidence=0.9,
+                closing_signal="explicit", evidence_directness="direct", in_summary=True)
     base.update(kw)
     return Item(**base)
 
@@ -71,9 +74,10 @@ def test_rule4_number_check():
 
 def test_rule5_authority_with_participants():
     ok, _ = run([mk()], meta=META)  # u019 is Hùng (PM), can_decide
-    assert "authority_unclear" not in ok[0].flags and ok[0].confidence == 0.9
+    assert "authority_unclear" not in ok[0].flags and ok[0].confidence == pytest.approx(0.95)
     lan, _ = run([mk(evidence=["u015"])], meta=META)
     assert "authority_unclear" in lan[0].flags and lan[0].confidence == 0.6
+    assert lan[0].confidence_breakdown["cap_authority"] < 0
 
 
 def test_rule5_no_meta_no_flag_but_speaker_n_always_flagged():
@@ -91,15 +95,15 @@ def test_rule6_conditional_without_condition_becomes_open():
 
 
 def test_rule7_low_confidence():
-    items, _ = run([mk(confidence=0.65)])
+    items, _ = run([mk(closing_signal="none")])  # 0.5 - 0.15 + 0.1 = 0.45
     assert "low_confidence" in items[0].flags
 
 
 def test_rule8_ids_and_sorting():
     items, _ = run([
         mk(content="AWS", evidence=["u019"]),
-        mk(type="action", status=None, content="X", evidence=["u010"], owner="Lan"),
-        mk(content="On-prem", evidence=["u006"], confidence=0.5),
+        mk(type="action", status=None, content="X", evidence=["u010"], owner="Lan", verify_passed=True),
+        mk(content="On-prem", evidence=["u006"], closing_signal="none"),
     ])
     assert [(i.item_id, i.content) for i in items] == [("d01", "On-prem"), ("d02", "AWS"), ("a01", "X")]
 

@@ -27,8 +27,8 @@ Quy tắc gán trạng thái cho decision:
 4. Hoãn: "để tính sau", "để anh/chị/em hỏi sếp đã", "tuần sau bàn tiếp", "chờ khách phản hồi", "để em xem đã" → "deferred".
 5. Có thảo luận nhưng không kết luận → "open" và thêm cờ "no_closing_signal" vào flags.
 6. Đề xuất chưa ai phản hồi → "proposed". Một đề xuất ban đầu ("chắc được, để em xem") rồi sau đó bị thay bằng phương án khác → "superseded" trong history.
-7. Không chắc chắn → chọn trạng thái KÉM chắc chắn hơn (open/proposed thay cho confirmed) và hạ confidence.
-8. Nội dung "phương án đó", "cái đó" mà transcript KHÔNG nói rõ là gì → KHÔNG được bịa nội dung; nếu tạo item thì status "open", content nêu rõ là chưa xác định nội dung, confidence thấp (≤ 0.4).
+7. Không chắc chắn → chọn trạng thái KÉM chắc chắn hơn (open/proposed thay cho confirmed) và chọn nhãn thận trọng (closing_signal "none"/"implicit", evidence_directness "inferred").
+8. Nội dung "phương án đó", "cái đó" mà transcript KHÔNG nói rõ là gì → KHÔNG được bịa nội dung; nếu tạo item thì status "open", content nêu rõ là chưa xác định nội dung, closing_signal "none", evidence_directness "inferred".
 9. Câu chủ đề quay lại sau ("quay lại vụ lúc nãy, cái đó…") thuộc cùng vấn đề với lần bàn trước – gộp vào cùng một decision và dựng history liền mạch.
 
 Quy tắc cho action:
@@ -39,7 +39,11 @@ Quy tắc cho action:
 Quy tắc chung:
 - Chỉ dùng ID câu có trong transcript được cung cấp.
 - KHÔNG điền owner, deadline, con số không có trong câu bằng chứng.
-- confidence (0–1): mức chắc chắn của bạn về loại + trạng thái + nội dung. Confirmed có câu chốt rõ của PM: 0.85–0.95. Trạng thái suy luận từ câu mơ hồ: ≤ 0.6.
+- KHÔNG ghi số confidence. Thay vào đó gắn 4 NHÃN cho mỗi item (code sẽ tự tính điểm):
+  * closing_signal (chỉ có nghĩa với decision; action/blocker/... để null): "explicit" = có từ chốt rõ trong câu bằng chứng ("chốt vậy nhé", "thống nhất là", "vậy quyết là", "triển khai theo phương án…"); "implicit" = đồng thuận ngầm, không có từ chốt ("ừ, làm vậy đi", "ok làm thế"); "none" = không có tín hiệu chốt (đề xuất, thảo luận, hoãn, điều kiện chưa thỏa).
+  * evidence_directness: "direct" = câu bằng chứng nói thẳng nội dung/người/hạn của item; "inferred" = phải suy ra từ nhiều câu hoặc ngữ cảnh, câu bằng chứng không tự nói rõ.
+  * contradicted_later: true nếu SAU câu bằng chứng cuối còn câu phản bác, đổi ý hoặc thay thế kết luận này; ngược lại false.
+  * in_summary: true nếu có câu tóm tắt/nhắc lại kết luận của người chủ trì (hoặc ai đó) trong chủ đề, trước khi chuyển phần khác; ngược lại false.
 - flags chỉ dùng các giá trị: "no_closing_signal". (Các cờ khác do code gắn.)
 - content viết ngắn gọn bằng tiếng Việt, cụ thể.
 
@@ -52,7 +56,8 @@ Quy tắc chung:
      {"status": "proposed", "content": "Dùng AWS", "reason": "trả theo tháng", "evidence": ["u015"]},
      {"status": "confirmed", "content": "Dùng AWS", "reason": null, "evidence": ["u019"]}
    ],
-   "owner": null, "deadline": null, "evidence": ["u019"], "confidence": 0.9, "flags": []}
+   "owner": null, "deadline": null, "evidence": ["u019"], "closing_signal": "explicit", "evidence_directness": "direct",
+   "contradicted_later": false, "in_summary": false, "flags": []}
 ]}
 
 <!-- USER -->

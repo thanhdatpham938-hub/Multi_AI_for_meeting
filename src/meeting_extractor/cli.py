@@ -13,7 +13,7 @@ from pathlib import Path
 from .export import export_run
 from .llm import LLMError
 from .parsing import load_meta
-from .pipeline import run
+from .pipeline import run, run_audio
 
 STATUS_ICON = {"confirmed": "✔", "conditional": "◐", "deferred": "⏸", "open": "?", "proposed": "…", "superseded": "✗"}
 
@@ -49,8 +49,9 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="meeting_extractor", description="Trích xuất quyết định từ transcript họp")
     sub = parser.add_subparsers(dest="command", required=True)
 
-    p_run = sub.add_parser("run", help="Phân tích một transcript .txt/.vtt")
+    p_run = sub.add_parser("run", help="Phân tích một transcript .txt/.vtt hoặc file audio")
     p_run.add_argument("path", type=Path)
+    p_run.add_argument("--audio", action="store_true", help="Coi file là audio (mặc định tự nhận theo đuôi mp3/m4a/wav/mp4)")
     p_run.add_argument("--meta", type=Path, default=None, help="File meeting_meta.json (tùy chọn)")
 
     p_exp = sub.add_parser("export", help="Xuất kết quả một lần chạy")
@@ -61,7 +62,8 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         if args.command == "run":
-            result = run(args.path, load_meta(args.meta), progress=lambda msg, _f: print(f"… {msg}", file=sys.stderr))
+            runner = run_audio if args.audio else run
+            result = runner(args.path, load_meta(args.meta), progress=lambda msg, _f: print(f"… {msg}", file=sys.stderr))
             _print_result(result)
             print(f"\nĐã lưu: runs/{result.run_id}/result.json")
         else:

@@ -27,11 +27,17 @@ def oracle_result(n: int) -> RunResult:
     for exp in answer["items"]:
         history = [HistoryEntry(status="superseded", content=s["content"], evidence=s["evidence"])
                    for s in exp.get("history_superseded", [])]
-        conf = exp.get("max_confidence", 0.9)
+        # Labels a good Agent 3 + Agent 4 would produce; confidence is then computed by the formula.
+        confirmed = exp.get("status") == "confirmed"
+        labels = dict(
+            closing_signal=("explicit" if confirmed else "none") if exp["type"] == "decision" else None,
+            evidence_directness="direct", contradicted_later=False, in_summary=confirmed,
+            verify_passed=True if exp["type"] in ("decision", "action") else None,
+        )
         items.append(Item(item_id="", type=exp["type"], topic_id="t01", topic="T", content=exp["content"],
                           status=exp.get("status"), condition=exp.get("condition"), owner=exp.get("owner"),
                           deadline=exp.get("deadline"), evidence=exp["evidence"], history=history,
-                          confidence=conf))
+                          confidence=0.5, **labels))
     items, _ = apply_rules(items, utts, meta)
     topic = Topic(topic_id="t01", title="T", utterance_ids=[u.id for u in utts])
     return RunResult(run_id="x", source_file=f"tc{n}", model_light="l", model_strong="s", prompt_versions={},

@@ -1,0 +1,28 @@
+{
+  "base": {
+    "decision": 0.5,
+    "action": 0.65,
+    "request": 0.65,
+    "knowledge": 0.7,
+    "blocker": 0.7,
+    "open_issue": 0.7,
+    "default": 0.5
+  },
+  "closing_explicit": 0.2,
+  "closing_implicit": 0.05,
+  "closing_none": -0.15,
+  "evidence_inferred": -0.1,
+  "closer_can_decide": 0.15,
+  "closer_unknown": -0.15,
+  "verify_passed": 0.1,
+  "verify_failed": -0.25,
+  "multi_evidence": 0.05,
+  "contradicted_later": -0.2,
+  "noisy_evidence": -0.15,
+  "in_summary": 0.1,
+  "min_score": 0.05,
+  "max_score": 0.98,
+  "cap_authority": 0.6,
+  "cap_verify_failed": 0.5,
+  "cap_tracker_failed": 0.3
+}

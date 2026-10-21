@@ -14,6 +14,7 @@ from .agents.extractor import extract
 from .agents.segmenter import segment
 from .agents.tracker import TrackResult, candidates_to_items, track_detailed
 from .agents.verifier import needs_verification, verify
+from .audio import save_audio, transcribe_with_warnings
 from .config import PROMPTS_DIR, Settings, load_settings
 from .llm import LLMClient, LLMError, load_prompt, make_llm
 from .models import Item, MeetingMeta, RunResult, Topic, Utterance
@@ -21,6 +22,8 @@ from .parsing import parse_file, parse_text
 from .rules import apply_rules
 
 ProgressFn = Callable[[str, float], None]
+
+AUDIO_EXTENSIONS = (".mp3", ".m4a", ".wav", ".mp4")
 
 VERIFY_FAILED_CAP = 0.5
 
@@ -242,6 +245,8 @@ def run_utterances(
     parse_warnings: list[str] | None = None,
     progress: ProgressFn | None = None,
     save: bool = True,
+    run_id: str | None = None,
+    audio_path: str | None = None,
 ) -> RunResult:
     settings = settings or load_settings()
     llm = llm or make_llm(settings)
@@ -250,7 +255,7 @@ def run_utterances(
     if not utterances:
         raise ValueError("Transcript không có câu hợp lệ nào (kiểm tra định dạng [mm:ss] Tên: nội dung).")
 
-    run_id = new_run_id(source_name)
+    run_id = run_id or new_run_id(source_name)
     run_dir = settings.runs_dir / run_id
 
     notify("Agent 1 – Chia chủ đề", 0.05)
@@ -291,6 +296,7 @@ def run_utterances(
         warnings=warnings,
         failed_topics=failed_topics,
         meta=meta,
+        audio_path=audio_path,
     )
     if save:
         save_result(result, run_dir)
@@ -308,10 +314,44 @@ def run(
     progress: ProgressFn | None = None,
     save: bool = True,
 ) -> RunResult:
-    """parse → Agent 1 → (Agent 2 → 3 → 4 per topic) → rules → runs/<run_id>/result.json"""
+    """parse → Agent 1 → (Agent 2 → 3 → 4 per topic) → rules → runs/<run_id>/result.json
+
+    Audio files (see AUDIO_EXTENSIONS) are routed to `run_audio`.
+    """
+    if Path(path).suffix.lower() in AUDIO_EXTENSIONS:
+        return run_audio(path, meta, llm=llm, settings=settings, progress=progress, save=save)
     utterances, warnings = parse_file(path)
     return run_utterances(utterances, str(path), meta, llm=llm, settings=settings,
                           parse_warnings=warnings, progress=progress, save=save)
+
+
+def run_audio(
+    path: str | Path,
+    meta: MeetingMeta | None = None,
+    *,
+    llm: LLMClient | None = None,
+    settings: Settings | None = None,
+    progress: ProgressFn | None = None,
+    save: bool = True,
+    transcribe_client: Any = None,
+) -> RunResult:
+    """Speech-to-text (with speaker diarization) → the normal pipeline.
+
+    The audio is copied to runs/<run_id>/audio.<ext> and `RunResult.audio_path` holds that file's
+    name relative to the run directory (e.g. "audio.mp3").
+    """
+    settings = settings or load_settings()
+    notify = progress or (lambda _msg, _frac: None)
+    notify("Chuyển giọng nói thành văn bản", 0.01)
+    utterances, warnings = transcribe_with_warnings(path, settings, client=transcribe_client)
+    run_id = new_run_id(str(path))
+    audio_name: str | None = None
+    if save:
+        audio_name = save_audio(path, settings.runs_dir / run_id).name
+    return run_utterances(
+        utterances, str(path), meta, llm=llm, settings=settings, parse_warnings=warnings,
+        progress=progress, save=save, run_id=run_id, audio_path=audio_name,
+    )
 
 
 def run_text(

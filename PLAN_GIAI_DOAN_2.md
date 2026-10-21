@@ -165,7 +165,7 @@ Ba subagent chạy cùng lúc. Mỗi agent viết **một module mới** và tes
 >
 > | Tín hiệu | Nguồn | Điểm | Áp dụng cho |
 > | --- | --- | --- | --- |
-> | Điểm nền | — | +0,50 | mọi mục |
+> | Điểm nền theo loại (đã quyết 21/10) | — | decision 0,50 · action/request 0,65 · knowledge/blocker/open_issue 0,70 | mọi mục |
 > | `closing_signal = explicit` | AI | +0,20 | chỉ `decision` |
 > | `closing_signal = implicit` | AI | +0,05 | chỉ `decision` |
 > | `closing_signal = none` | AI | −0,15 | chỉ `decision` |
@@ -310,5 +310,6 @@ Cắt từ trên xuống:
 | 7 | Giữ trần cứng sau công thức, rồi mới gắn `low_confidence` | Công thức cho TC5 ra 0,65 > 0,6 (trượt đáp án); điểm 0,3 của `tracker_failed` bị công thức ghi đè |
 | 8 | 3B: model tách người nói, `run_audio`, nhãn "Speaker A"; file > 25MB bị từ chối, không cắt khúc | `whisper-1` không tách người nói; giao diện truyền file tải lên chứ không phải đường dẫn; regex "Speaker N" chỉ nhận số; cắt khúc cần ffmpeg và làm lệch nhãn người nói giữa các khúc |
 | 9 | 5A gộp chủ đề bằng 1 lần gọi, dùng lại `segment_merge.md` | So đôi một là O(n²) lần gọi |
+| 12 | Điểm nền theo loại mục | Với nền chung 0,50, gần như mọi việc cần làm/tri thức < 0,7 → bị gắn `low_confidence`, mất tác dụng của cờ và của Duyệt nhanh (chủ dự án chọn 21/10) |
 | 11 | Thêm quy tắc báo giá và xin duyệt trước mọi lần chạy tốn tiền API (mục 2, định nghĩa 2 subagent) | Yêu cầu của chủ dự án 21/10 |
 | 10 | L1 ghi `failed_topics` cả khi Agent 2/4 lỗi; QA nhận kết quả đã áp duyệt; mỗi subagent dùng file test riêng; pha 0 đưa kế hoạch vào repo | Tránh mất dữ liệu ở bước khác, tránh xung đột file khi song song, để subagent đọc được kế hoạch |

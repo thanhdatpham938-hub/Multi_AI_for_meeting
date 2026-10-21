@@ -1,4 +1,4 @@
-"""Agent 3 – decision tracking: history, final status, confidence."""
+"""Agent 3 – decision tracking: history, final status and discrete confidence labels."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from typing import Any
 from pydantic import BaseModel, ValidationError
 
 from ..llm import LLMClient, LLMError, load_prompt
-from ..models import Candidate, HistoryEntry, Item, MeetingMeta, Topic, TrackedItem, Utterance
+from ..models import CLOSING_SIGNALS, EVIDENCE_DIRECTNESS, Candidate, HistoryEntry, Item, MeetingMeta, Topic, TrackedItem, Utterance
 from .common import format_participants, format_utterances, select
 
 TRACKER_FLAGS = {"no_closing_signal"}
@@ -31,7 +31,8 @@ class TrackResult:
     items: list[Item]
     warnings: list[str] = field(default_factory=list)
     dropped_items: int = 0  # whole items dropped by validation (history-entry drops do not count)
-# Placeholder until rules.py computes confidence from labels (phase 3A).
+
+# Placeholder only: rules.py recomputes confidence from the labels (confidence.py).
 DEFAULT_CONFIDENCE = 0.5
 
 
@@ -100,6 +101,10 @@ def validate_raw_items(raw_items: list[Any], topic: Topic) -> tuple[list[Tracked
             dropped += 1
             continue
         data = dict(raw)
+        for key in BOOL_LABELS:
+            data[key], ok = _coerce_bool(data.get(key))
+            if not ok:
+                warnings.append(f"{tag}: nhãn {key} không hợp lệ ({raw.get(key)!r}) → bỏ nhãn này.")
         data["history"], bad_history = _clean_history(data.get("history"))
         if bad_history:
             warnings.append(f"{tag}: bỏ {bad_history} mục lịch sử không hợp lệ (thiếu/sai trạng thái).")
@@ -111,6 +116,20 @@ def validate_raw_items(raw_items: list[Any], topic: Topic) -> tuple[list[Tracked
             warnings.append(f"{tag}: bỏ vì không hợp lệ ({where}: {first['msg']}).")
             dropped += 1
     return tracked, warnings, dropped
+
+
+BOOL_LABELS = ("contradicted_later", "in_summary")
+
+
+def _coerce_bool(value: Any) -> tuple[bool | None, bool]:
+    """Return (bool or None, ok). Accepts true/false, "true"/"false", 1/0; anything else -> (None, False)."""
+    if value is None or isinstance(value, bool):
+        return value, True
+    if isinstance(value, (int, float)) and value in (0, 1):
+        return bool(value), True
+    if isinstance(value, str) and value.strip().lower() in ("true", "false"):
+        return value.strip().lower() == "true", True
+    return None, False
 
 
 def _clean_history(raw_history: Any) -> tuple[list[dict[str, Any]], int]:
@@ -148,6 +167,11 @@ def candidates_to_items(candidates: list[Candidate], topic: Topic) -> list[Item]
     ]
 
 
+def _valid_label(value: str | None, allowed: tuple[str, ...]) -> str | None:
+    """Unknown label values are treated as missing (None)."""
+    return value if value in allowed else None
+
+
 def build_items(tracked: list[TrackedItem], topic: Topic) -> list[Item]:
     items: list[Item] = []
     for t in tracked:
@@ -164,7 +188,11 @@ def build_items(tracked: list[TrackedItem], topic: Topic) -> list[Item]:
                 owner=t.owner,
                 deadline=t.deadline,
                 evidence=t.evidence,
-                confidence=t.confidence if t.confidence is not None else DEFAULT_CONFIDENCE,
+                confidence=DEFAULT_CONFIDENCE,  # any number from the AI is ignored
+                closing_signal=_valid_label(t.closing_signal, CLOSING_SIGNALS),
+                evidence_directness=_valid_label(t.evidence_directness, EVIDENCE_DIRECTNESS),
+                contradicted_later=t.contradicted_later,
+                in_summary=t.in_summary,
                 flags=[f for f in t.flags if f in TRACKER_FLAGS],
             )
         )

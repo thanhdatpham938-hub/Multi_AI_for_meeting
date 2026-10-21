@@ -13,7 +13,7 @@ VTT_TIMING_RE = re.compile(r"^(\d{1,2}:)?(\d{2}):(\d{2})[.,]\d{1,3}\s*-->")
 VTT_VOICE_RE = re.compile(r"^<v(?:\.[^\s>]+)*\s+([^>]+)>(.*?)(?:</v>)?$")
 VTT_PREFIX_RE = re.compile(r"^([^:]{1,60}):\s*(.+)$")
 TAG_RE = re.compile(r"<[^>]+>")
-SPEAKER_N_RE = re.compile(r"^speaker\s*\d+$", re.IGNORECASE)
+SPEAKER_N_RE = re.compile(r"^speaker(?:\s*\d+|\s+[a-z])$", re.IGNORECASE)
 ROLE_SUFFIX_RE = re.compile(r"\s*\([^)]*\)\s*$")
 
 
@@ -27,7 +27,7 @@ def base_speaker_name(speaker: str) -> str:
 
 
 def is_anonymous_speaker(speaker: str) -> bool:
-    """True for diarization labels such as 'Speaker 1'."""
+    """True for diarization labels such as 'Speaker 1' or 'Speaker A'."""
     return bool(SPEAKER_N_RE.match(base_speaker_name(speaker)))
 
 

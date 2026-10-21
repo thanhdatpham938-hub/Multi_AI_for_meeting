@@ -14,6 +14,7 @@ RUNS_DIR = PROJECT_ROOT / "runs"
 
 PROVIDERS = ("openai", "anthropic")
 DEFAULT_PROVIDER = "openai"
+DEFAULT_TRANSCRIBE_MODEL = "gpt-4o-transcribe-diarize"
 # provider -> (MODEL_LIGHT, MODEL_STRONG)
 DEFAULT_MODELS = {
     "openai": ("gpt-4.1-mini", "gpt-4.1"),
@@ -37,6 +38,7 @@ class Settings:
     provider: str = DEFAULT_PROVIDER
     openai_api_key: str | None = None
     openai_base_url: str | None = None
+    transcribe_model: str = DEFAULT_TRANSCRIBE_MODEL
 
 
 def load_settings(env_file: Path | None = None) -> Settings:
@@ -56,4 +58,5 @@ def load_settings(env_file: Path | None = None) -> Settings:
         provider=provider,
         openai_api_key=_strip_inline_comment(os.getenv("OPENAI_API_KEY")),
         openai_base_url=_strip_inline_comment(os.getenv("OPENAI_BASE_URL")),
+        transcribe_model=_strip_inline_comment(os.getenv("TRANSCRIBE_MODEL")) or DEFAULT_TRANSCRIBE_MODEL,
     )
