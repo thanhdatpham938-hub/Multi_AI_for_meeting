@@ -221,6 +221,29 @@ Mở http://localhost:8501, rồi:
    tiến độ duyệt, cảnh báo.
 5. **⬇ JSON** (toàn bộ, đã áp dụng chỉnh sửa) và **⬇ Excel** (chỉ mục Chấp nhận/Đã sửa, mỗi loại một sheet).
    Chỉnh sửa được lưu ngay vào `runs/<run_id>/reviews.json`.
+6. Nếu một chủ đề bị lỗi khi phân tích, đầu trang hiện khung **đỏ** ghi tên chủ đề đó; nút **Duyệt nhanh**
+   chỉ dùng được sau khi tick ô xác nhận đã đọc cảnh báo.
+
+## Triển khai (Streamlit Community Cloud)
+
+Bản deploy mặc định **không có đăng nhập**, ai có đường link cũng dùng được và tiêu tốn API key của bạn. Làm đủ các bước sau:
+
+1. Đẩy code lên GitHub (**không** commit `.env`, API key hay thư mục `runs/`). Trên
+   [share.streamlit.io](https://share.streamlit.io) tạo app mới: repository này, nhánh `main`,
+   **Main file path** là `app/review_app.py`, **Python version** 3.12 (Advanced settings).
+2. Đặt API key trong **Settings → Secrets** của app (định dạng TOML), không đặt trong repo:
+
+   ```toml
+   OPENAI_API_KEY = "sk-..."
+   ```
+
+   Thêm các biến cấu hình khác nếu cần (ví dụ `MODEL_LIGHT`, `MODEL_STRONG`) theo mục "Cấu hình".
+3. **Giới hạn người xem:** vào **Settings → Sharing**, chọn "Only specific people can view this app"
+   và nhập email những người được phép. Không để app ở chế độ công khai.
+4. **Đặt trần chi tiêu trên OpenAI:** trong OpenAI dashboard, mục Billing → Usage limits, đặt hạn mức
+   hằng tháng (và ngưỡng cảnh báo email) để một lượt dùng sai không đốt hết ngân sách.
+5. **Dữ liệu không được lưu lâu dài:** thư mục `runs/` nằm trên ổ tạm của máy chủ và **mất khi app khởi động lại**
+   hoặc ngủ đông. Hãy bấm **⬇ JSON** / **⬇ Excel** để tải kết quả về ngay sau khi duyệt xong.
 
 ## Kiểm thử
 

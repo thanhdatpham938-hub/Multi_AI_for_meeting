@@ -90,7 +90,10 @@ def test_pipeline_survives_llm_failure_on_one_topic(settings):
     llm.handlers["track"] = lambda s, u: "không phải json" if "t02" in u else _track(s, u)
     result = run(FIXTURES / "tc1.txt", llm=llm, settings=settings)
     assert any("t02" in w for w in result.warnings)
-    assert len(result.items) == 1
+    # Phase 1: the failed topic keeps Agent 2's raw candidates (flagged) instead of being dropped.
+    assert len(result.items) == 2
+    assert result.failed_topics == ["t02"]
+    assert any("tracker_failed" in i.flags for i in result.items if i.topic_id == "t02")
 
 
 def test_pipeline_no_meta_still_runs(settings):

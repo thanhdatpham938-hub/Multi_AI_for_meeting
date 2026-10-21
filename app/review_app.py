@@ -605,6 +605,21 @@ def meeting_panel(run_dir: Path, raw: RunResult, result: RunResult, reviews: dic
         st.json(result.prompt_versions, expanded=False)
 
 
+def failed_topics_banner(run_dir: Path, result: RunResult) -> bool:
+    """Show a red error for topics that failed; return True when quick-approve may be used."""
+    if not result.failed_topics:
+        return True
+    titles = {t.topic_id: t.title for t in result.topics}
+    names = ", ".join(f"“{titles.get(tid, tid)}”" for tid in result.failed_topics)
+    st.error(
+        f"**Một số chủ đề bị lỗi khi phân tích:** {names}.\n\n"
+        "Kết quả có thể thiếu hoặc chưa đầy đủ ở các chủ đề này (mục chỉ mang tính tham khảo, "
+        "chưa có trạng thái quyết định đã được kiểm chứng). Hãy đọc lại phần transcript tương ứng "
+        "hoặc chạy phân tích lại."
+    )
+    return st.checkbox("Tôi đã đọc cảnh báo và hiểu kết quả có thể thiếu", key=f"failed-ack::{run_dir}")
+
+
 def page_run() -> None:
     run_dir = Path(st.session_state.run_dir)
     if not (run_dir / "result.json").exists():
@@ -633,6 +648,7 @@ def page_run() -> None:
         st.markdown(f"<div class='meta-line'>{''.join(f'<span>{p}</span>' for p in parts)}</div>",
                     unsafe_allow_html=True)
         st.write("")
+        failed_ack = failed_topics_banner(run_dir, raw)
         _, a1, a2, a3, a4 = st.columns([2.2, 1, 1, 1, 1.5])
         if a1.button("↻ Tải lại", use_container_width=True):
             st.session_state.pop(f"reviews::{run_dir}", None)
@@ -643,7 +659,7 @@ def page_run() -> None:
         a3.download_button("⬇ Excel", to_excel(result), file_name=f"{run_dir.name}.xlsx",
                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                            use_container_width=True, help="Chỉ gồm các mục đã Chấp nhận / Đã sửa")
-        if a4.button("✔ Duyệt nhanh", type="primary", use_container_width=True,
+        if a4.button("✔ Duyệt nhanh", type="primary", use_container_width=True, disabled=not failed_ack,
                      help="Chấp nhận mọi mục chưa duyệt không có cờ và độ tin cậy ≥ 70%"):
             for i in result.items:
                 if i.review == "pending" and not i.flags and i.confidence >= 0.7:
