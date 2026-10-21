@@ -19,8 +19,8 @@ from .models import Item, ItemType, RunResult, Utterance
 REVIEWS_FILE = "reviews.json"
 EXPORTED_REVIEWS = {"accepted", "edited"}
 EDITABLE_FIELDS = ("content", "status", "owner", "deadline", "condition", "pending_on", "follow_up_owner")
-# Review keys that apply_reviews deliberately ignores: free-text reviewer note and answers to clarification questions.
-NOTE_KEYS = ("note", "answers")
+# Other review keys ("note", "answers", "resolved") are reviewer bookkeeping: apply_reviews ignores them
+# and they stay in reviews.json only.
 
 TYPE_LABELS = {
     ItemType.decision: "Quyết định",
@@ -112,6 +112,8 @@ def apply_reviews(result: RunResult, reviews: dict[str, Any]) -> RunResult:
             updates["review"] = rev["review"]
         item = item.model_copy(update=updates)
         item = Item.model_validate(item.model_dump())  # re-validate edited status values
+        if item.owner and "missing_owner" in item.flags:  # the reviewer supplied the owner
+            item.flags = [f for f in item.flags if f != "missing_owner"]
         item.owner = rename_speakers(item.owner, names)
         item.content = rename_speakers(item.content, names) or item.content
         items.append(item)
@@ -148,6 +150,17 @@ COLUMNS = [
 ]
 
 
+_FORMULA_PREFIXES = ("=", "+", "-", "@", "\t", "\r")
+
+
+def append_row(ws: Any, row: list[Any]) -> None:
+    """Append a row; text starting with = + - @ is stored as a string, never as a formula."""
+    ws.append(row)
+    for cell in ws[ws.max_row]:
+        if isinstance(cell.value, str) and cell.value.startswith(_FORMULA_PREFIXES):
+            cell.data_type = "s"
+
+
 def to_excel(result: RunResult, only_reviewed: bool = True) -> bytes:
     """One sheet per item type. By default only accepted/edited items are exported."""
     wb = Workbook()
@@ -166,7 +179,7 @@ def to_excel(result: RunResult, only_reviewed: bool = True) -> bytes:
         ("Model", f"{result.model_light} / {result.model_strong}"),
     ]
     for r in rows:
-        info.append([r[0], r[1] or ""])
+        append_row(info, [r[0], r[1] or ""])
     info.column_dimensions["A"].width = 18
     info.column_dimensions["B"].width = 70
 
@@ -185,7 +198,7 @@ def to_excel(result: RunResult, only_reviewed: bool = True) -> bytes:
             cell.fill = header_fill
             ws.column_dimensions[get_column_letter(idx)].width = width
         for i in items:
-            ws.append([
+            append_row(ws, [
                 i.item_id, i.topic, i.content,
                 STATUS_LABELS.get(i.status.value, i.status.value) if i.status else "",
                 i.condition or "", i.owner or "", i.deadline or "", round(i.confidence, 2),
@@ -219,6 +232,21 @@ def export_run(run_dir: str | Path, fmt: str = "xlsx", only_reviewed: bool = Tru
     else:
         raise ValueError(f"Định dạng không hỗ trợ: {fmt}")
     return path
+
+
+# ---------------------------------------------------------------- safe text for st.markdown
+
+_MD_ENTITIES = {"\\": "&#92;", "`": "&#96;", "*": "&#42;", "_": "&#95;", "[": "&#91;", "]": "&#93;", "$": "&#36;",
+                "~": "&#126;"}
+
+
+def md_safe(text: Any) -> str:
+    """html.escape plus numeric entities for markdown / LaTeX syntax (dollar, asterisk, underscore, brackets,
+    tilde, backslash, backtick).
+
+    Entities (not backslashes) so the result is also literal inside raw HTML blocks passed to st.markdown.
+    """
+    return "".join(_MD_ENTITIES.get(ch, ch) for ch in html.escape(str(text)))
 
 
 # ---------------------------------------------------------------- evidence display (pure helpers)
@@ -264,12 +292,12 @@ def highlight_quote_html(text: str, quote: str | None) -> tuple[str, bool | None
     """HTML-escaped `text` with the quote in <b>. Flag: None = no quote given, True = found, False = not found."""
     text = unicodedata.normalize("NFC", text)
     if not quote or not quote.strip():
-        return html.escape(text), None
+        return md_safe(text), None
     span = locate_quote(text, quote)
     if span is None:
-        return html.escape(text), False
+        return md_safe(text), False
     a, b = span
-    return f"{html.escape(text[:a])}<b>{html.escape(text[a:b])}</b>{html.escape(text[b:])}", True
+    return f"{md_safe(text[:a])}<b>{md_safe(text[a:b])}</b>{md_safe(text[b:])}", True
 
 
 def utterance_context(utterances: list[Utterance], uid: str, n: int = 2) -> tuple[list[Utterance], list[Utterance]]:
@@ -333,6 +361,14 @@ def _number_in(text: str) -> str | None:
 
 
 def _other_decision_text(item: Item, result: RunResult) -> str:
+    """Content of the decision that conflicts with `item`: from conflict_pairs, else related_items, else generic."""
+    from .conflicts import conflict_pairs
+
+    for a, b in conflict_pairs(result.items):
+        if a.item_id == item.item_id:
+            return _short(b.content)
+        if b.item_id == item.item_id:
+            return _short(a.content)
     by_id = {i.item_id: i for i in result.items}
     for rid in item.related_items:
         other = by_id.get(rid)
@@ -349,7 +385,7 @@ def clarification_question(item: Item, reason: str, result: RunResult) -> str:
     if reason == "unresolved_reference":
         return f"'{_first_quote(item, result)}' đang nói tới phương án nào?"
     if reason == "conflicting_decision":
-        return f"{content} và {_other_decision_text(item, result)} – quyết định nào là cuối cùng?"
+        return f"'{content}' và '{_other_decision_text(item, result)}' – quyết định nào là cuối cùng?"
     if reason == "needs_recheck":
         number = _number_in(item.content)
         if number:
@@ -375,24 +411,32 @@ def _answer_field(reason: str) -> str:
 
 
 def clarification_items(result: RunResult, reviews: dict[str, Any] | None = None) -> list[Clarification]:
-    """Questions for items needing clarification; rejected items are skipped; answered ones keep their answer.
+    """Questions for items needing clarification, in transcript order of items.
 
-    `result` should be the review-applied result (an answered owner / follow_up_owner already filled in).
+    Skipped: rejected items and questions the reviewer marked resolved (kept in reviews.json). `result` should be
+    the review-applied result, so a filled owner / follow_up_owner already removes its question.
     """
     reviews = reviews or {}
     out: list[Clarification] = []
     for item in result.items:
         if item.review == "rejected":
             continue
-        answers = reviews.get("items", {}).get(item.item_id, {}).get("answers")
-        answers = answers if isinstance(answers, dict) else {}
+        entry = reviews.get("items", {}).get(item.item_id, {})
+        answers = entry.get("answers") if isinstance(entry.get("answers"), dict) else {}
+        resolved = entry.get("resolved") if isinstance(entry.get("resolved"), dict) else {}
         for reason in clarification_reasons(item):
-            out.append(Clarification(item.item_id, reason, clarification_question(item, reason, result),
-                                     _answer_field(reason), answers.get(reason) or None))
-        for reason in (r for r in answers if r == NO_FOLLOW_UP and NO_FOLLOW_UP not in clarification_reasons(item)):
+            if resolved.get(reason):
+                continue
             out.append(Clarification(item.item_id, reason, clarification_question(item, reason, result),
                                      _answer_field(reason), answers.get(reason) or None))
     return out
+
+
+def resolve_edits(existing: dict[str, Any], reason: str) -> dict[str, Any]:
+    """Review-entry fields recording that the question `reason` is resolved (does not touch `review`)."""
+    resolved = dict(existing.get("resolved") or {})
+    resolved[reason] = True
+    return {"resolved": resolved}
 
 
 def answer_edits(existing: dict[str, Any], c: Clarification, answer: str) -> dict[str, Any]:
@@ -458,7 +502,7 @@ def _add_knowledge_sheet(wb: Workbook, result: RunResult, only_reviewed: bool, h
     for e in entries:
         src = e["source"]
         cites = "\n".join(f"{u['id']} [{u['time']}] {u['speaker']}: {u['text']}" for u in src["utterances"])
-        ws.append([e["item_id"], e["content"], e["topic"], e["scope_label"], "Có" if e["needs_recheck"] else "",
+        append_row(ws, [e["item_id"], e["content"], e["topic"], e["scope_label"], "Có" if e["needs_recheck"] else "",
                    src["meeting"], src["date"] or "", cites, e["confidence"],
                    REVIEW_LABELS.get(e["review"], e["review"])])
     for row in ws.iter_rows(min_row=2):

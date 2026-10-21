@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from pydantic import BaseModel
@@ -13,6 +14,9 @@ from .common import format_utterances
 EVENT_KINDS = ("đề xuất", "phản bác", "chốt", "hoãn", "chuyển chủ đề", "quay lại chủ đề")
 MAX_EVENTS = 80
 MAX_SUMMARY_CHARS = 140
+_ID_IN_TEXT = re.compile(r"\(?\bu\d{3,}\b\)?")
+# Agent 3 sees a neutral label for "chốt": the light model's label must never act as a closing signal.
+NEUTRAL_KINDS = {"chốt": "có thể là câu chốt (cần tự kiểm câu gốc)"}
 
 
 class DigestEvent(BaseModel):
@@ -34,7 +38,7 @@ def clean_events(events: list[DigestEvent], utterances: list[Utterance]) -> list
     for e in events[:MAX_EVENTS]:
         ids = [i for i in dict.fromkeys(e.utterance_ids) if i in by_id]
         kind = e.kind.strip().lower()
-        summary = " ".join(e.summary.split())[:MAX_SUMMARY_CHARS]
+        summary = " ".join(_ID_IN_TEXT.sub("", e.summary).split())[:MAX_SUMMARY_CHARS]
         if kind not in EVENT_KINDS or not ids or not summary:
             continue
         first = by_id[ids[0]]
@@ -48,7 +52,9 @@ def format_digest(events: list[DigestEvent]) -> str:
 
     Utterance ids are left out on purpose: the outline is context, never a source of evidence ids.
     """
-    return "\n".join(f"- [{e.time}] {e.speaker} – {e.kind}: {e.summary}" for e in events)
+    return "\n".join(
+        f"- [{e.time}] {e.speaker} – {NEUTRAL_KINDS.get(e.kind, e.kind)}: {e.summary}" for e in events
+    )
 
 
 def build_digest(

@@ -5,7 +5,6 @@
 
 from __future__ import annotations
 
-import html
 import json
 import re
 import shutil
@@ -36,7 +35,9 @@ from meeting_extractor.export import (  # noqa: E402
     knowledge_entries,
     knowledge_to_json,
     load_reviews,
+    md_safe,
     related_summaries,
+    resolve_edits,
     save_reviews,
     to_excel,
     to_json,
@@ -171,7 +172,7 @@ st.markdown(CSS, unsafe_allow_html=True)
 def badge(text: str, colors: tuple[str, str], wrap: bool = False) -> str:
     bg, fg = colors
     cls = "badge wrap" if wrap else "badge"
-    return f'<span class="{cls}" style="background:{bg};color:{fg}">{html.escape(text)}</span>'
+    return f'<span class="{cls}" style="background:{bg};color:{fg}">{md_safe(text)}</span>'
 
 
 def status_badge(item: Item) -> str:
@@ -185,7 +186,7 @@ def flag_badges(item: Item) -> str:
 
 
 def esc(text: Any) -> str:
-    return html.escape(str(text)) if text not in (None, "") else "—"
+    return md_safe(str(text)) if text not in (None, "") else "—"
 
 
 def list_runs() -> list[Path]:
@@ -295,7 +296,7 @@ def confidence_terms(item: Item) -> tuple[list[tuple[str, float]], list[tuple[st
 def _term_html(label: str, value: float, first: bool) -> str:
     color = POS_COLOR if value >= 0 else NEG_COLOR
     num = fmt_num(value) if first else fmt_num(value, signed=True)
-    return f'<span style="color:{color};font-weight:600">{num}</span> {html.escape(label)}'
+    return f'<span style="color:{color};font-weight:600">{num}</span> {md_safe(label)}'
 
 
 def confidence_explanation_html(item: Item) -> str | None:
@@ -306,7 +307,7 @@ def confidence_explanation_html(item: Item) -> str | None:
     parts = " ".join(_term_html(label, value, n == 0) for n, (label, value) in enumerate(terms))
     lines = [f"<b>{fmt_num(item.confidence)}</b> = {parts}"]
     for label, value in caps:
-        lines.append(f'<span style="color:{CAP_COLOR};font-weight:600">Giới hạn áp dụng: {html.escape(label)} '
+        lines.append(f'<span style="color:{CAP_COLOR};font-weight:600">Giới hạn áp dụng: {md_safe(label)} '
                      f"({fmt_num(value, signed=True)})</span>")
     return "<br>".join(lines)
 
@@ -592,8 +593,8 @@ def page_all() -> None:
         done = sum(1 for v in reviews["items"].values() if v.get("review") in ("accepted", "edited", "rejected"))
         with st.container(border=True):
             c1, c2, c3 = st.columns([3, 2, 1])
-            c1.markdown(f"**{html.escape(title)}**  \n<span class='muted'>{html.escape(when)} · "
-                        f"{html.escape(Path(r.source_file).name)}</span>", unsafe_allow_html=True)
+            c1.markdown(f"**{md_safe(title)}**  \n<span class='muted'>{md_safe(when)} · "
+                        f"{md_safe(Path(r.source_file).name)}</span>", unsafe_allow_html=True)
             c2.markdown(f"<span class='muted'>{len(r.items)} mục · đã duyệt {done}/{len(r.items)}</span>",
                         unsafe_allow_html=True)
             if c3.button("Mở", key=f"open-{run_dir.name}", use_container_width=True):
@@ -674,12 +675,12 @@ def row_extras(item: Item) -> str:
             lines.append(f"Đang chờ: {item.pending_on}")
         if item.follow_up_owner:
             lines.append(f"Theo dõi: {item.follow_up_owner}")
-    return "".join(f"<br><span class='muted'>{html.escape(x)}</span>" for x in lines)
+    return "".join(f"<br><span class='muted'>{md_safe(x)}</span>" for x in lines)
 
 
 def _utt_line(u: Any, cls: str, body_html: str) -> str:
-    return (f"<div class='quote{cls}'><small>{html.escape(u.id)} · {html.escape(u.time)} · "
-            f"<b>{html.escape(u.speaker)}</b></small><br>{body_html}</div>")
+    return (f"<div class='quote{cls}'><small>{md_safe(u.id)} · {md_safe(u.time)} · "
+            f"<b>{md_safe(u.speaker)}</b></small><br>{body_html}</div>")
 
 
 def evidence_html(item: Item, result: RunResult, uid: str, context: int = 2) -> str | None:
@@ -692,9 +693,9 @@ def evidence_html(item: Item, result: RunResult, uid: str, context: int = 2) -> 
     body, found = highlight_quote_html(u.text, item.evidence_quotes.get(uid))
     if found is False:
         body += "<br><span class='warn-small'>Không tìm thấy đoạn trích trong câu này.</span>"
-    parts = [_utt_line(c, " ctx", html.escape(c.text)) for c in before]
+    parts = [_utt_line(c, " ctx", md_safe(c.text)) for c in before]
     parts.append(_utt_line(u, "", body))
-    parts += [_utt_line(c, " ctx", html.escape(c.text)) for c in after]
+    parts += [_utt_line(c, " ctx", md_safe(c.text)) for c in after]
     return "".join(parts)
 
 
@@ -709,15 +710,15 @@ def field_sources_html(item: Item, result: RunResult) -> str:
         for uid in item.field_evidence.get(key, []):
             u = by_id.get(uid)
             if u:
-                rows.append(f"<small><b>{label}</b> ← {html.escape(u.id)} · {html.escape(u.time)} "
-                            f"{html.escape(u.speaker)}: “{html.escape(u.text)}”</small>")
+                rows.append(f"<small><b>{label}</b> ← {md_safe(u.id)} · {md_safe(u.time)} "
+                            f"{md_safe(u.speaker)}: “{md_safe(u.text)}”</small>")
     return "<br>".join(rows)
 
 
 def contradicted_html(item: Item, result: RunResult) -> str:
     by_id = {u.id: u for u in result.utterances}
-    rows = [f"<small>{html.escape(u.id)} · {html.escape(u.time)} <b>{html.escape(u.speaker)}</b>: "
-            f"“{html.escape(u.text)}”</small>"
+    rows = [f"<small>{md_safe(u.id)} · {md_safe(u.time)} <b>{md_safe(u.speaker)}</b>: "
+            f"“{md_safe(u.text)}”</small>"
             for u in (by_id.get(e) for e in item.field_evidence.get("contradicted_by", [])) if u]
     return "<br>".join(rows)
 
@@ -749,7 +750,7 @@ def render_related(item: Item, result: RunResult) -> None:
     if not related:
         return
     st.markdown("**Mục liên quan**")
-    lines = [f"• **{html.escape(rid)}** — {html.escape(text) if ok else '(mục không còn trong kết quả)'}"
+    lines = [f"• **{md_safe(rid)}** — {md_safe(text) if ok else '(mục không còn trong kết quả)'}"
              for rid, text, ok in related]
     st.markdown("  \n".join(lines), unsafe_allow_html=True)
 
@@ -759,21 +760,21 @@ def item_dialog(run_dir: Path, result: RunResult, item_id: str) -> None:
     item = next(i for i in result.items if i.item_id == item_id)
     by_id = {u.id: u for u in result.utterances}
     st.markdown(f"**{item.item_id} · {TYPE_LABEL[item.type]}** — {esc(item.topic)}")
-    st.markdown(f"### {html.escape(item.content)}")
+    st.markdown(f"### {md_safe(item.content)}", unsafe_allow_html=True)
     st.markdown(status_badge(item) + flag_badges(item)
                 + badge(REVIEW_LABELS.get(item.review, item.review), REVIEW_STYLE[item.review]),
                 unsafe_allow_html=True)
     info = []
     if item.condition:
-        info.append(f"**Điều kiện:** {item.condition}")
-    info.append(f"**Phụ trách:** {item.owner or '—'}  ·  **Hạn chót:** {item.deadline or '—'}  ·  "
+        info.append(f"**Điều kiện:** {md_safe(item.condition)}")
+    info.append(f"**Phụ trách:** {md_safe(item.owner or '—')}  ·  **Hạn chót:** {md_safe(item.deadline or '—')}  ·  "
                 f"**Độ tin cậy:** {fmt_num(item.confidence)}")
     if item.commitment in COMMITMENT_LABELS:
         info.append(f"**Cam kết:** {COMMITMENT_LABELS[item.commitment]}")
     if item.pending_on:
-        info.append(f"**Đang chờ:** {item.pending_on}")
+        info.append(f"**Đang chờ:** {md_safe(item.pending_on)}")
     if item.follow_up_owner:
-        info.append(f"**Người theo dõi:** {item.follow_up_owner}")
+        info.append(f"**Người theo dõi:** {md_safe(item.follow_up_owner)}")
     st.markdown("  \n".join(info))
     explanation = confidence_explanation_html(item)
     if explanation:
@@ -791,9 +792,9 @@ def item_dialog(run_dir: Path, result: RunResult, item_id: str) -> None:
         st.markdown("**Lịch sử thay đổi**")
         rows = []
         for h in item.history:
-            quotes = "<br>".join(f"<small>{by_id[e].time} {html.escape(by_id[e].speaker)}: “{html.escape(by_id[e].text)}”</small>"
+            quotes = "<br>".join(f"<small>{by_id[e].time} {md_safe(by_id[e].speaker)}: “{md_safe(by_id[e].text)}”</small>"
                                  for e in h.evidence if e in by_id)
-            reason = f" — <i>{html.escape(h.reason)}</i>" if h.reason else ""
+            reason = f" — <i>{md_safe(h.reason)}</i>" if h.reason else ""
             rows.append(f"<div class='tl-item'>{badge(STATUS_LABELS.get(h.status.value, h.status.value), STATUS_STYLE.get(h.status.value, ('#eee', '#333')))}"
                         f" {esc(h.content)}{reason}<br>{quotes}</div>")
         st.markdown(f"<div class='tl'>{''.join(rows)}</div>", unsafe_allow_html=True)
@@ -843,9 +844,9 @@ def meeting_panel(run_dir: Path, raw: RunResult, result: RunResult, reviews: dic
         ("Dự án", meta.project if meta else None),
         ("File", Path(result.source_file).name),
     ]
-    st.markdown("  \n".join(f"**{k}:** {html.escape(str(v)) if v else '—'}" for k, v in rows))
+    st.markdown("  \n".join(f"**{k}:** {md_safe(str(v)) if v else '—'}" for k, v in rows))
     if meta and meta.agenda:
-        st.markdown("**Chương trình:**  \n" + "  \n".join(f"• {html.escape(a)}" for a in meta.agenda))
+        st.markdown("**Chương trình:**  \n" + "  \n".join(f"• {md_safe(a)}" for a in meta.agenda))
     if meta and meta.participants:
         st.dataframe(pd.DataFrame([{"Tên": p.name, "Vai trò": p.role or "", "Chốt": p.can_decide}
                                    for p in meta.participants]), hide_index=True, use_container_width=True,
@@ -904,7 +905,7 @@ def qa_history(run_dir: Path) -> list[dict[str, Any]]:
 
 
 def render_qa_entry(entry: dict[str, Any], result: RunResult) -> None:
-    st.markdown(f"**Hỏi:** {html.escape(entry['question'])}", unsafe_allow_html=True)
+    st.markdown(f"**Hỏi:** {md_safe(entry['question'])}", unsafe_allow_html=True)
     if entry.get("error"):
         st.error(entry["error"])
         return
@@ -914,13 +915,13 @@ def render_qa_entry(entry: dict[str, Any], result: RunResult) -> None:
     if answer.out_of_scope:
         st.info(answer.text or _qa.OUT_OF_SCOPE_TEXT)
         return
-    st.markdown(f"**Trả lời:** {html.escape(answer.text)}", unsafe_allow_html=True)
+    st.markdown(f"**Trả lời:** {md_safe(answer.text)}", unsafe_allow_html=True)
     by_id = {u.id: u for u in result.utterances}
     for e in answer.evidence:
         u = by_id.get(e)
         if u:
-            st.markdown(f"<div class='quote'><small>{u.id} · {u.time} · <b>{html.escape(u.speaker)}</b></small>"
-                        f"<br>{html.escape(u.text)}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='quote'><small>{u.id} · {u.time} · <b>{md_safe(u.speaker)}</b></small>"
+                        f"<br>{md_safe(u.text)}</div>", unsafe_allow_html=True)
 
 
 def ask_question(question: str, result: RunResult) -> dict[str, Any]:
@@ -966,18 +967,24 @@ def clarify_tab(run_dir: Path, result: RunResult, reviews: dict[str, Any]) -> No
         item = by_id[c.item_id]
         key = f"{c.item_id}-{c.reason}"
         with st.container(border=True, key=f"clarify-{key}"):
-            st.markdown(f"**{html.escape(item.item_id)}** · {badge(REASON_BADGES.get(c.reason, c.reason), ('#fff3e0', '#b45f06'))}"
-                        f" {html.escape(item.content)}", unsafe_allow_html=True)
-            st.markdown(f"❓ {html.escape(c.question)}", unsafe_allow_html=True)
+            st.markdown(f"**{md_safe(item.item_id)}** · {badge(REASON_BADGES.get(c.reason, c.reason), ('#fff3e0', '#b45f06'))}"
+                        f" {md_safe(item.content)}", unsafe_allow_html=True)
+            st.markdown(f"❓ {md_safe(c.question)}", unsafe_allow_html=True)
             if c.answered:
-                st.caption(f"Đã trả lời: {c.answered}")
+                st.caption(f"Đã trả lời: {md_safe(c.answered)}")
             with st.form(f"clarify-form-{key}", clear_on_submit=True):
                 answer = st.text_input("Trả lời", key=f"clarify-answer-{key}", label_visibility="collapsed",
                                        placeholder="Nhập câu trả lời ngắn")
                 if st.form_submit_button("Lưu trả lời", key=f"clarify-submit-{key}") and answer.strip():
                     existing = get_reviews(run_dir)["items"].get(c.item_id, {})
-                    set_review(run_dir, c.item_id, "edited", answer_edits(existing, c, answer))
+                    # only answers that set a real field count as an edit; notes keep the review state
+                    review = "edited" if c.answer_field != "note" else existing.get("review", item.review)
+                    set_review(run_dir, c.item_id, review, answer_edits(existing, c, answer))
                     st.rerun()
+            if st.button("Đã làm rõ", key=f"clarify-resolve-{key}", help="Ẩn câu hỏi này khỏi danh sách"):
+                existing = get_reviews(run_dir)["items"].get(c.item_id, {})
+                set_review(run_dir, c.item_id, existing.get("review", item.review), resolve_edits(existing, c.reason))
+                st.rerun()
 
 
 def knowledge_tab(result: RunResult, run_dir: Path) -> None:
@@ -1017,18 +1024,18 @@ def page_run() -> None:
 
     main, side = st.columns([2.55, 1], gap="large")
     with main:
-        st.markdown(f'<div class="crumb">Tất cả cuộc họp › <b>{html.escape(title)}</b></div>'
-                    f'<div class="title">{html.escape(title)}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="crumb">Tất cả cuộc họp › <b>{md_safe(title)}</b></div>'
+                    f'<div class="title">{md_safe(title)}</div>', unsafe_allow_html=True)
         parts = []
         if meta and (meta.start_time or meta.date):
-            parts.append(f"🗓️ {html.escape(' – '.join(x for x in [meta.start_time, meta.end_time] if x))}"
-                         f"{', ' + html.escape(meta.date) if meta.date else ''}")
+            parts.append(f"🗓️ {md_safe(' – '.join(x for x in [meta.start_time, meta.end_time] if x))}"
+                         f"{', ' + md_safe(meta.date) if meta.date else ''}")
         speakers = {u.speaker for u in result.utterances}
         n_people = len(meta.participants) if meta and meta.participants else len(speakers)
         parts.append(f"👥 {n_people} người tham dự")
         parts.append(f"💬 {len(result.utterances)} câu · {len(result.topics)} chủ đề")
         if meta and meta.project:
-            parts.append(f"<span class='chip'>{html.escape(meta.project)}</span>")
+            parts.append(f"<span class='chip'>{md_safe(meta.project)}</span>")
         st.markdown(f"<div class='meta-line'>{''.join(f'<span>{p}</span>' for p in parts)}</div>",
                     unsafe_allow_html=True)
         st.write("")

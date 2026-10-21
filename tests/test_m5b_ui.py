@@ -21,7 +21,9 @@ from meeting_extractor.export import (
     knowledge_to_json,
     load_reviews,
     locate_quote,
+    md_safe,
     related_summaries,
+    resolve_edits,
     to_excel,
     utterance_context,
 )
@@ -201,7 +203,7 @@ def test_clarification_lists_only_relevant_items_with_template_questions():
     assert got[("a01", "missing_owner")].question == "Ai chịu trách nhiệm: Làm tài liệu API?"
     assert got[("a01", "missing_owner")].answer_field == "owner"
     assert got[("d03", "unresolved_reference")].question == "'phương án đó' đang nói tới phương án nào?"
-    assert got[("d01", "conflicting_decision")].question == "Dùng AWS và Dùng on-premise – quyết định nào là cuối cùng?"
+    assert got[("d01", "conflicting_decision")].question == "'Dùng AWS' và 'Dùng on-premise' – quyết định nào là cuối cùng?"
     assert got[("d04", "needs_recheck")].question == "Con số '30 triệu' còn đúng không?"
     assert "câu sai" in got[("d05", "quote_mismatch")].question
     assert "đang chờ: sếp" in got[("d06", NO_FOLLOW_UP)].question
@@ -243,11 +245,48 @@ def test_answered_question_is_marked_answered():
     assert c.answered == "Minh"
 
 
-def test_answered_follow_up_question_stays_visible_after_follow_up_owner_filled():
-    items = [_item("d06", status="deferred", follow_up_owner="Lan")]
-    reviews = {"items": {"d06": {"answers": {NO_FOLLOW_UP: "Lan"}}}, "speaker_names": {}}
-    (c,) = clarification_items(_result(items), reviews)
-    assert c.reason == NO_FOLLOW_UP and c.answered == "Lan"
+def test_follow_up_question_disappears_when_follow_up_owner_filled():
+    items = [_item("d06", status="deferred")]
+    assert [c.reason for c in clarification_items(_result(items))] == [NO_FOLLOW_UP]
+    reviews = {"items": {"d06": {"review": "edited", "follow_up_owner": "Lan"}}, "speaker_names": {}}
+    applied = apply_reviews(_result(items), reviews)
+    assert clarification_items(applied, reviews) == []
+
+
+def test_apply_reviews_removes_missing_owner_only_when_owner_filled():
+    base = _result([_item("a01", "action", flags=["missing_owner", "number_check"]),
+                    _item("a02", "action", flags=["missing_owner"])])
+    reviews = {"items": {"a01": {"review": "edited", "owner": "Minh"}, "a02": {"review": "edited", "owner": ""}},
+               "speaker_names": {}}
+    out = {i.item_id: i for i in apply_reviews(base, reviews).items}
+    assert out["a01"].flags == ["number_check"] and out["a02"].flags == ["missing_owner"]
+    assert base.items[0].flags == ["missing_owner", "number_check"]  # original untouched
+
+
+def test_other_flags_are_not_auto_removed_by_edits():
+    flags = ["unresolved_reference", "conflicting_decision", "needs_recheck"]
+    base = _result([_item("d01", flags=list(flags))])
+    out = apply_reviews(base, {"items": {"d01": {"review": "edited", "content": "mới", "note": "x"}}})
+    assert out.items[0].flags == flags
+
+
+def test_resolved_questions_are_hidden_but_kept():
+    items = [_item("d01", flags=["needs_recheck", "unresolved_reference"])]
+    reviews = {"items": {"d01": {"review": "pending", **resolve_edits({}, "needs_recheck")}}, "speaker_names": {}}
+    assert [c.reason for c in clarification_items(_result(items), reviews)] == ["unresolved_reference"]
+    assert reviews["items"]["d01"]["resolved"] == {"needs_recheck": True}
+    more = resolve_edits(reviews["items"]["d01"], "unresolved_reference")
+    assert more["resolved"] == {"needs_recheck": True, "unresolved_reference": True}
+
+
+def test_conflict_question_names_partner_from_conflict_pairs():
+    items = [_item("d01", content="Dùng AWS", status="confirmed", evidence=["u004"], flags=["conflicting_decision"]),
+             _item("d02", content="Dùng on-premise", status="proposed", evidence=["u004"],
+                   flags=["conflicting_decision"]),
+             _item("d03", content="Việc khác hẳn", status="confirmed", evidence=["u006"])]
+    qs = {c.item_id: c.question for c in clarification_items(_result(items))}
+    assert qs["d01"] == "'Dùng AWS' và 'Dùng on-premise' – quyết định nào là cuối cùng?"
+    assert qs["d02"] == "'Dùng on-premise' và 'Dùng AWS' – quyết định nào là cuối cùng?"
 
 
 # ---------------------------------------------------------------- clarification tab (AppTest)
@@ -277,7 +316,7 @@ def test_clarify_tab_lists_item_and_answer_is_saved_as_owner(run_dir):
     saved = load_reviews(run_dir)["items"][item_id]
     assert saved["owner"] == "Minh" and saved["review"] == "edited"
     assert saved["answers"]["missing_owner"] == "Minh" and "missing_owner: Minh" in saved["note"]
-    assert "Đã trả lời: Minh" in _text(at)
+    assert "Ai chịu trách nhiệm:" not in _text(at)  # owner filled -> missing_owner question gone
     reviews_file = json.loads((run_dir / "reviews.json").read_text(encoding="utf-8"))
     assert reviews_file["items"][item_id]["owner"] == "Minh"
 
@@ -296,7 +335,60 @@ def test_clarify_tab_non_owner_answer_goes_to_note_only(run_dir):
     at.run()
     saved = load_reviews(run_dir)["items"][item_id]
     assert "owner" not in saved and "Đúng, 30 triệu" in saved["note"]
+    assert saved["review"] == "pending"  # a note alone is not an edit
+    assert "Đã trả lời: Đúng, 30 triệu" in html.unescape(_text(at))
     assert not at.exception
+
+
+def _first_item_id(run_dir: Path) -> str:
+    return json.loads((run_dir / "result.json").read_text(encoding="utf-8"))["items"][0]["item_id"]
+
+
+def test_clarify_note_answer_keeps_accepted_review(run_dir):
+    _patch_result(run_dir, lambda d: d["items"][0].update(flags=["unresolved_reference"]))
+    item_id = _first_item_id(run_dir)
+    (run_dir / "reviews.json").write_text(json.dumps(
+        {"items": {item_id: {"review": "accepted"}}, "speaker_names": {}}), encoding="utf-8")
+    at = _open_run(run_dir)
+    key = f"{item_id}-unresolved_reference"
+    next(t for t in at.text_input if t.key == f"clarify-answer-{key}").set_value("Phương án AWS")
+    next(b for b in at.button if b.key == f"clarify-submit-{key}").click()
+    at.run()
+    assert load_reviews(run_dir)["items"][item_id]["review"] == "accepted"
+
+
+def test_clarify_resolve_button_hides_question_and_persists(run_dir):
+    _patch_result(run_dir, lambda d: d["items"][0].update(flags=["needs_recheck"]))
+    item_id = _first_item_id(run_dir)
+    at = _open_run(run_dir)
+    key = f"{item_id}-needs_recheck"
+    next(b for b in at.button if b.key == f"clarify-resolve-{key}").click()
+    at.run()
+    assert not at.exception
+    saved = load_reviews(run_dir)["items"][item_id]
+    assert saved["resolved"] == {"needs_recheck": True} and saved["review"] == "pending"
+    assert not any(b.key == f"clarify-resolve-{key}" for b in at.button)
+    assert any("Không có mục nào cần làm rõ" in i.value for i in at.info)
+
+
+def test_markdown_and_latex_syntax_is_neutralised_in_clarify_tab_and_dialog(run_dir):
+    def patch(d):
+        item = d["items"][0]
+        item.update(content="Giá 30$ đến 50$ *đậm* _nghiêng_ [link](x) `code`", flags=["missing_owner"],
+                    type="action", status=None, related_items=[d["items"][1]["item_id"]])
+        d["items"][1]["content"] = "Phí $10 và $20"
+    _patch_result(run_dir, patch)
+    at = _open_run(run_dir)
+    md = _text(at)
+    assert not at.exception
+    assert "Ai chịu trách nhiệm: Giá 30&#36; đến 50&#36;" in md
+    assert "&#42;đậm&#42;" in md and "&#95;nghiêng&#95;" in md and "&#91;link&#93;" in md and "&#96;code&#96;" in md
+    assert "30$" not in md
+    first_id = _first_item_id(run_dir)
+    next(b for b in at.button if b.key and b.key.startswith("open-") and b.key.endswith(f"-{first_id}")).click()
+    at.run()
+    md = _text(at)
+    assert not at.exception and "Phí &#36;10 và &#36;20" in md and "$10" not in md
 
 
 def test_clarify_tab_blank_answer_not_saved(run_dir):
@@ -456,3 +548,39 @@ def test_n6_oserror_when_saving_audio_shows_vietnamese_error(monkeypatch):
     at.run()
     assert not at.exception
     assert any("Không ghi được file" in e.value and "disk full" in e.value for e in at.error)
+
+
+# ---------------------------------------------------------------- markdown safety / Excel injection (pure)
+
+
+def test_md_safe_escapes_html_and_markdown_syntax():
+    out = md_safe("<b>30$</b> *a* _b_ [c] `d` ~e~ \f & g")
+    for ch in "<$*_[]`~\\":
+        assert ch not in out
+    assert "&lt;b&gt;30&#36;" in out and "&amp; g" in out
+    assert md_safe(None) == "None" and md_safe("Tiếng Việt: chốt") == "Tiếng Việt: chốt"
+
+
+def test_highlight_neutralises_dollar_signs():
+    html_, found = highlight_quote_html("Giá 30$ tới 50$ nhé", "tới 50$")
+    assert found is True and "$" not in html_ and "<b>tới 50</b>&#36;" in html_
+
+
+def test_excel_formula_like_text_is_stored_as_text_in_every_sheet():
+    evil = ['=HYPERLINK("http://x","a")', "+1+1", "-2+3", "@SUM(A1)"]
+    meta = MeetingMeta(title="=cmd|' /C calc'!A0", project="P")
+    items = [_item("d01", content=evil[0], topic=evil[1], review="accepted", owner=evil[2], condition=evil[3]),
+             _item("k01", "knowledge", content=evil[3], topic="+x", knowledge_scope="project", review="accepted")]
+    utts = _utts()
+    utts[3] = Utterance(id="u004", time="00:04", speaker="=bad", text="@evil")
+    wb = load_workbook(BytesIO(to_excel(_result(items, utts, meta))))
+    seen = 0
+    for ws in wb.worksheets:
+        for row in ws.iter_rows():
+            for cell in row:
+                if isinstance(cell.value, str) and cell.value.startswith(("=", "+", "-", "@")):
+                    seen += 1
+                    assert cell.data_type == "s", (ws.title, cell.coordinate, cell.value)
+    assert seen >= 6
+    assert wb["Thông tin"]["B1"].value == "=cmd|' /C calc'!A0" and wb["Thông tin"]["B1"].data_type == "s"
+    assert wb["Quyết định"]["C2"].value == evil[0]

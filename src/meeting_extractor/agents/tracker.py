@@ -60,8 +60,10 @@ def format_digest_block(digest: str) -> str:
     if not digest.strip():
         return ""
     return (
-        "Dàn ý toàn cuộc họp (chỉ để hiểu ngữ cảnh, không phải bằng chứng):\n"
-        f"{digest.strip()}\n"
+        "Dàn ý toàn cuộc họp (chỉ để hiểu ngữ cảnh, không phải bằng chứng). Dàn ý chỉ để định hướng: "
+        "trạng thái \"confirmed\" chỉ được gán dựa trên chính các câu trong transcript ở trên, "
+        "KHÔNG BAO GIỜ dựa vào nhãn trong dàn ý.\n"
+        f"<digest>\n{digest.strip()}\n</digest>\n"
     )
 
 

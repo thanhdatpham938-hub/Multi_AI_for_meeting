@@ -172,8 +172,8 @@ def test_apply_reconcile_flags_only_decision_pairs_and_links_two_way():
 
 
 def test_flag_conflicts_catches_cross_topic_pair():
-    a = mk("d02", status="confirmed", content="Chạy quảng cáo Facebook trong tháng 11", topic_id="t01")
-    b = mk("d19", status="proposed", content="Chạy quảng cáo Facebook sang tháng 12", evidence=["u009"],
+    a = mk("d02", status="confirmed", content="Ngân sách 50 triệu cho quảng cáo Facebook", topic_id="t01")
+    b = mk("d19", status="proposed", content="Ngân sách 80 triệu cho quảng cáo Facebook", evidence=["u009"],
            topic_id="t07")
     assert flag_conflicts([a, b]) == 1
     assert "conflicting_decision" in a.flags and "conflicting_decision" in b.flags
@@ -209,3 +209,46 @@ def test_intermediate_files_saved_and_ids_stable(settings):
     ids = [i.item_id for i in result.items]
     assert len(ids) == len(set(ids))
     assert {r for i in result.items for r in i.related_items} <= set(ids)
+
+
+# ---------------------------------------------------------------- follow-ups
+
+
+def test_digest_neutral_kind_and_ids_stripped_from_summary():
+    llm = make_llm(digest={"events": [
+        {"kind": "chốt", "summary": "Chốt 3 kênh (u001) theo u002", "utterance_ids": ["u001"]},
+        {"kind": "hoãn", "summary": "Hoãn", "utterance_ids": ["u003"]},
+    ]})
+    text, _ = build_digest(llm, "m", UTTS)
+    assert "u001" not in text and "u002" not in text
+    assert "có thể là câu chốt (cần tự kiểm câu gốc)" in text
+    assert "– chốt:" not in text and "– hoãn:" in text
+
+
+def test_digest_block_is_wrapped_and_marked_as_orientation_only(settings):
+    llm = make_llm()
+    go(llm, settings)
+    user = next(u for p, _, u in llm.calls if p == "track")
+    assert "<digest>" in user and "</digest>" in user and "KHÔNG BAO GIỜ dựa vào nhãn" in user
+
+
+def test_long_transcript_merges_only_once(settings):
+    utts = [Utterance(id=f"u{i:03d}", time="00:00", speaker="A", text=f"câu {i}") for i in range(1, 321)]
+
+    def seg(system: str, user: str) -> dict:
+        ids = [ln.split()[0] for ln in user.splitlines() if ln.startswith("u")]
+        return {"topics": [{"topic_id": "t01", "title": "Chung", "utterance_ids": ids}]}
+
+    llm = FakeLLM({"segment": seg, "merge": {"groups": [{"title": "Chung", "topic_ids": ["w1_t01", "w2_t01", "w3_t01"]}]},
+                   "digest": {"events": []}, "extract": {"candidates": []}, "track": {"items": []},
+                   "reconcile": {"related": [], "conflicts": []}})
+    run_utterances(utts, "long.txt", llm=llm, settings=settings, save=False)
+    assert purposes(llm).count("merge") == 1
+
+
+def test_reconcile_invalid_json_twice_keeps_all_items(settings):
+    llm = make_llm(reconcile=["rác", "vẫn rác", "lại rác"])
+    result = go(llm, settings)
+    assert purposes(llm).count("reconcile") == 3  # first try + 2 retries
+    assert any("Đối soát lỗi" in w for w in result.warnings)
+    assert len(result.items) == 3

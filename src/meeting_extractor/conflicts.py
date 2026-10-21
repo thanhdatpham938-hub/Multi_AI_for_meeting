@@ -3,10 +3,11 @@
 Two decisions conflict when one is `confirmed`, the other is still live (proposed / open / deferred / conditional,
 never superseded) and both are about the same issue, regardless of topic assignment.
 
-"Same issue" = they share an utterance id (evidence or history), or they share >= 2 content tokens with an overlap
-coefficient >= 0.2. Tokens that appear in COMMON_DF or more decisions of the same meeting ("khai trương", "quảng
-cáo"…) carry no signal about *which* issue is meant and are ignored. A flagged pair only asks a human to look;
-nothing is deleted.
+"Same issue" = they share an utterance id (evidence or history), or they share >= 2 content *words* with an overlap
+coefficient >= 0.2. Vietnamese words are often two syllables ("khai trương", "quảng cáo"), so shared syllables that
+are adjacent in a text count as one word. Generic time words ("ngày", "tuần"…) and tokens that appear in COMMON_DF
+or more decisions of the same meeting carry no signal about *which* issue is meant and are ignored. A flagged pair
+only asks a human to look; nothing is deleted.
 """
 
 from __future__ import annotations
@@ -31,12 +32,31 @@ tại theo vào ra lên xuống như nhưng nếu hoặc hay vậy nhé nhỉ th
 mình chúng tôi anh chị em bạn ban cái việc vụ phần bên về sang qua hơn rất quá lắm
 chưa quyết định chốt thống nhất làm dùng sẽ
 """.split())
+# Time words say *when*, not *what*: "khai trương ngày 8/12" vs "khuyến mãi ba ngày đầu" are different issues.
+TIME_WORDS = frozenset("ngày tuần tháng năm giờ phút sáng chiều tối nay mai đầu cuối".split())
 
 _TOKEN = re.compile(r"\w+", re.UNICODE)
 
 
+def _is_content(token: str) -> bool:
+    return len(token) >= MIN_TOKEN_LEN and token not in STOP_WORDS and token not in TIME_WORDS
+
+
 def content_tokens(text: str) -> set[str]:
-    return {t for t in _TOKEN.findall(text.lower()) if len(t) >= MIN_TOKEN_LEN and t not in STOP_WORDS}
+    return {t for t in _TOKEN.findall(text.lower()) if _is_content(t)}
+
+
+def shared_words(text: str, shared: set[str]) -> set[str]:
+    """Shared syllables of `text`, with runs of adjacent shared syllables merged into one word."""
+    words: set[str] = set()
+    run: list[str] = []
+    for tok in [*_TOKEN.findall(text.lower()), ""]:
+        if tok and _is_content(tok) and tok in shared:
+            run.append(tok)
+        elif run:
+            words.add(" ".join(run))
+            run = []
+    return words
 
 
 def all_evidence(item: Item) -> set[str]:
@@ -57,7 +77,10 @@ def same_issue(a: Item, b: Item, ignore: frozenset[str] = frozenset()) -> bool:
         return True
     ta, tb = content_tokens(a.content) - ignore, content_tokens(b.content) - ignore
     shared = ta & tb
-    if len(shared) < MIN_SHARED_TOKENS:
+    if not shared:
+        return False
+    n_words = min(len(shared_words(a.content, shared)), len(shared_words(b.content, shared)))
+    if n_words < MIN_SHARED_TOKENS:
         return False
     return len(shared) / min(len(ta), len(tb)) >= MIN_OVERLAP
 

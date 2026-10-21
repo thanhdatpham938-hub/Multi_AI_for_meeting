@@ -80,3 +80,28 @@ def test_flag_conflicts_marks_both_items():
              status="deferred", evidence=["u132"], confidence=0.9)
     assert flag_conflicts([a, b]) == 1
     assert CONFLICT_FLAG in a.flags and CONFLICT_FLAG in b.flags
+
+
+def _dec(content, status, ev):
+    return Item(item_id="", type="decision", topic_id="t", topic="T", content=content,
+                status=status, evidence=[ev], confidence=0.9)
+
+
+def test_two_syllable_word_counts_once():
+    # Only "khai trương" (one word, two syllables) and the time word "ngày" are shared -> not the same issue.
+    items = [_dec("Khai trương ngày 8/12", "conditional", "u031"),
+             _dec("Khuyến mãi khai trương: mua 1 tặng 1 size M trong ba ngày đầu", "confirmed", "u043")]
+    assert conflict_pairs(items) == []
+
+
+def test_two_distinct_shared_words_still_conflict():
+    # "sampling" and "phí" are two separate shared words (not adjacent) -> same issue.
+    items = [_dec("Chưa quyết định làm sampling ở siêu thị, chờ Hà hỏi giá phí", "deferred", "u034"),
+             _dec("Sampling tại Coopmart thay vì Big C do phí Big C cao gấp đôi", "confirmed", "u132")]
+    assert len(conflict_pairs(items)) == 1
+
+
+def test_shared_words_merges_adjacent_syllables():
+    from meeting_extractor.conflicts import shared_words
+
+    assert shared_words("Khuyến mãi khai trương ngày đầu", {"khai", "trương"}) == {"khai trương"}
