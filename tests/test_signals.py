@@ -330,9 +330,14 @@ def test_closing_utterance_id() -> None:
         "u004": [],
     }
     position = {"u001": 0, "u002": 1, "u003": 2, "u004": 3}
-    assert closing_utterance_id(["u001", "u002", "u003"], tagged, position) == "u003"
+    assert closing_utterance_id(["u001", "u002", "u003"], tagged, position) == "u001"  # CHOT_RO outranks a later "ừ"
     assert closing_utterance_id(["u002", "u004"], tagged, position) == "u004"  # no group A: latest
-    assert closing_utterance_id(["u003", "u001"], tagged, position) == "u003"  # order in list irrelevant
+    assert closing_utterance_id(["u003", "u001"], tagged, position) == "u001"  # order in list irrelevant
+    assert closing_utterance_id(["u003", "u004"], tagged, position) == "u003"  # DONG_Y_NGAN beats untagged
+    with_b = {**tagged, "u001": [Signal("CHOT_RO", "chốt"), Signal("CAU_HOI", "?")]}
+    assert closing_utterance_id(["u001", "u003"], with_b, position) == "u003"  # CHOT_RO with group B is skipped
+    ngam = {**tagged, "u002": [Signal("CHOT_NGAM", "ok")]}
+    assert closing_utterance_id(["u002", "u003"], ngam, position) == "u002"  # CHOT_NGAM beats DONG_Y_NGAN
     assert closing_utterance_id([], tagged, position) is None
     assert closing_utterance_id(["u999"], tagged, position) is None
     assert closing_utterance_id(["u999", "u002"], tagged, position) == "u002"

@@ -13,6 +13,25 @@ from .provenance import (
     owner_from_sources,
     sanitize_field_evidence,
 )
+from .signal_rules import (
+    SIGNAL_FLAGS,
+    WARN_PREFIX,
+    A1Plan,
+    Adj,
+    Ctx,
+    action_row10,
+    add_flag,
+    apply_siblings,
+    build_ctx,
+    carry_sticky,
+    decision_signals,
+    merge_duplicates,
+    number_signals,
+    owner_signals,
+    plan_a1,
+    run_warnings,
+    write_signal_check,
+)
 
 LOW_CONFIDENCE = 0.7
 
@@ -50,11 +69,6 @@ def has_number(text: str) -> bool:
 
 def _norm(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip().lower()
-
-
-def _add_flag(item: Item, flag: str) -> None:
-    if flag not in item.flags:
-        item.flags.append(flag)
 
 
 def _all_evidence_ids(item: Item) -> list[str]:
@@ -121,7 +135,7 @@ def _check_provenance(item: Item, by_id: dict[str, Utterance], warnings: list[st
     item.evidence_quotes = quotes
     if mismatched:
         warnings.append(f"\"{item.content}\": đoạn trích không khớp câu gốc ở {mismatched}")
-        _add_flag(item, "quote_mismatch")
+        add_flag(item, "quote_mismatch")
     item.field_evidence, dropped = sanitize_field_evidence(item.field_evidence, by_id)
     if dropped:
         warnings.append(f"Bỏ ID nguồn không tồn tại {dropped} khỏi field_evidence của \"{item.content}\"")
@@ -148,83 +162,96 @@ def _check_owner_deadline(
             item.deadline = None
 
 
-def _score(item: Item, utterances: list[Utterance], meta: MeetingMeta | None) -> None:
-    """Formula first, then hard caps (recorded in the breakdown)."""
+
+# ------------------------------------------------------------------ scoring and orchestration
+
+
+MAX_PASSES = 5
+
+
+def _score(item: Item, utterances: list[Utterance], meta: MeetingMeta | None, adj: Adj | None = None) -> None:
+    """Formula first (plus signal penalties), then hard caps (recorded in the breakdown)."""
+    adj = adj or Adj()
     w = load_weights()
-    score, breakdown = compute_confidence(item, utterances, meta)
+    score, breakdown = compute_confidence(item, utterances, meta, adj.terms, closer_id=adj.closing)
     if "authority_unclear" in item.flags:
         score = apply_cap(score, breakdown, "cap_authority", w["cap_authority"])
     if "verify_failed" in item.flags:
         score = apply_cap(score, breakdown, "cap_verify_failed", w["cap_verify_failed"])
     if "tracker_failed" in item.flags:
         score = apply_cap(score, breakdown, "cap_tracker_failed", w["cap_tracker_failed"])
+    for name in dict.fromkeys(adj.caps):
+        score = apply_cap(score, breakdown, name, w[name])
     item.confidence = score
     item.confidence_breakdown = breakdown
 
 
-def apply_rules(
-    items: list[Item], utterances: list[Utterance], meta: MeetingMeta | None = None
-) -> tuple[list[Item], list[str]]:
-    """Return (checked & sorted items with ids, warnings)."""
-    by_id = {u.id: u for u in utterances}
-    position = {u.id: i for i, u in enumerate(utterances)}
-    warnings: list[str] = []
-    kept: list[Item] = []
+def _prepare(original: Item, by_id: dict[str, Utterance], warnings: list[str]) -> Item | None:
+    item = original.model_copy(deep=True)
+    # Flags recomputed on every run must not survive a second run (quote_mismatch, low_confidence, signal flags).
+    drop = ("low_confidence", "quote_mismatch", *SIGNAL_FLAGS)
+    item.flags = [f for f in dict.fromkeys(item.flags) if f in VALID_FLAGS and f not in drop]
+    # Rule 1: every cited utterance id must exist.
+    missing = [eid for eid in _all_evidence_ids(item) if eid not in by_id]
+    if missing or not item.evidence:
+        warnings.append(f"Loại item \"{item.content}\": ID bằng chứng không tồn tại {missing or '(trống)'}")
+        return None
+    return item
 
-    for original in items:
-        item = original.model_copy(deep=True)
-        # low_confidence is recomputed below, so a stale copy must not survive a second run.
-        # quote_mismatch is recomputed below for the same reason.
-        item.flags = [
-            f for f in dict.fromkeys(item.flags) if f in VALID_FLAGS and f not in ("low_confidence", "quote_mismatch")
-        ]
 
-        # Rule 1: every cited utterance id must exist.
-        missing = [eid for eid in _all_evidence_ids(item) if eid not in by_id]
-        if missing or not item.evidence:
-            warnings.append(f"Loại item \"{item.content}\": ID bằng chứng không tồn tại {missing or '(trống)'}")
-            continue
-        evidence = sorted((by_id[e] for e in dict.fromkeys(item.evidence)), key=lambda u: position[u.id])
+def _process_item(item: Item, ctx: Ctx, plan: A1Plan, warnings: list[str]) -> Adj:
+    """Rules 2-6 plus the signal layer for one item. Returns the score adjustments."""
+    adj = Adj()
+    by_id, position, meta = ctx.by_id, ctx.position, ctx.meta
+    carry_sticky(item, adj)
 
-        # Mission 3 rules: commitment labels, decision deadlines, quote provenance.
-        _apply_commitment(item, warnings)
-        _drop_decision_deadline(item, warnings)
-        _check_provenance(item, by_id, warnings)
+    def cited() -> list[Utterance]:
+        return sorted((by_id[e] for e in dict.fromkeys(item.evidence)), key=lambda u: position[u.id])
 
-        # Rule 2: owner/deadline must appear in the evidence (field_evidence first).
-        _check_owner_deadline(item, evidence, by_id, utterances, meta, warnings)
+    # Mission 3 rules: commitment labels, decision deadlines, quote provenance.
+    _apply_commitment(item, warnings)
+    _drop_decision_deadline(item, warnings)
+    _check_provenance(item, by_id, warnings)
 
-        # Rule 3: actions need an owner.
-        if item.type == ItemType.action and not item.owner:
-            _add_flag(item, "missing_owner")
+    # Rule 2: owner/deadline must appear in the evidence (field_evidence first).
+    _check_owner_deadline(item, cited(), by_id, ctx.utterances, meta, warnings)
 
-        # Rule 4: money / percent / dates must be double-checked by a human.
-        if has_number(item.content) or (item.condition and has_number(item.condition)):
-            _add_flag(item, "number_check")
-        if item.type == ItemType.action and item.deadline and has_number(item.deadline):
-            _add_flag(item, "number_check")
+    # Signal layer: open call / volunteer before rule 3; decision table and A1 (may add an evidence id).
+    owner_signals(item, ctx, adj, warnings)
+    decision_signals(item, ctx, adj, plan)
+    action_row10(item, ctx, adj)
+    evidence = cited()
 
-        # Knowledge about the project that carries a figure may go stale.
-        if item.type == ItemType.knowledge and item.knowledge_scope == "project" and has_quantity(item.content):
-            _add_flag(item, "needs_recheck")
+    # Rule 3: actions need an owner.
+    if item.type == ItemType.action and not item.owner:
+        add_flag(item, "missing_owner")
 
-        # Rule 5: who closed the decision? (the confidence cap for it is applied in _score)
-        if item.type == ItemType.decision and closer_status(evidence[-1].speaker, meta) == "cannot":
-            _add_flag(item, "authority_unclear")
+    # Rule 4: money / percent / dates must be double-checked by a human.
+    if has_number(item.content) or (item.condition and has_number(item.condition)):
+        add_flag(item, "number_check")
+    if item.type == ItemType.action and item.deadline and has_number(item.deadline):
+        add_flag(item, "number_check")
+    number_signals(item, by_id, adj)
 
-        # Rule 6: conditional without a condition is just open.
-        if item.status == Status.conditional and not (item.condition or "").strip():
-            warnings.append(f"\"{item.content}\": conditional nhưng thiếu điều kiện → chuyển về open")
-            item.status = Status.open
-            item.condition = None
+    # Knowledge about the project that carries a figure may go stale.
+    if item.type == ItemType.knowledge and item.knowledge_scope == "project" and has_quantity(item.content):
+        add_flag(item, "needs_recheck")
 
-        # Rule 7: confidence = formula, then hard caps, then the low_confidence flag.
-        _score(item, utterances, meta)
-        if item.confidence < LOW_CONFIDENCE:
-            _add_flag(item, "low_confidence")
+    # Rule 5: who closed the decision? (the confidence cap for it is applied in _score)
+    if item.type == ItemType.decision:
+        closer = by_id[adj.closing] if adj.closing else evidence[-1]
+        if closer_status(closer.speaker, meta) == "cannot":
+            add_flag(item, "authority_unclear")
 
-        kept.append(item)
+    # Rule 6: conditional without a condition is just open.
+    if item.status == Status.conditional and not (item.condition or "").strip():
+        warnings.append(f"\"{item.content}\": conditional nhưng thiếu điều kiện → chuyển về open")
+        item.status = Status.open
+        item.condition = None
+    return adj
 
+
+def _assign_ids(kept: list[Item], position: dict[str, int]) -> list[Item]:
     # Rule 8: ids by type in transcript order, then flagged / low-confidence first.
     def first_pos(it: Item) -> int:
         return min(position[e] for e in it.evidence)
@@ -235,7 +262,52 @@ def apply_rules(
         counters[it.type] = counters.get(it.type, 0) + 1
         it.item_id = f"{ID_PREFIX[it.type]}{counters[it.type]:02d}"
     kept.sort(key=lambda it: (0 if needs_attention(it) else 1, TYPE_ORDER.index(it.type), first_pos(it)))
-    return kept, warnings
+    return kept
+
+
+def _single_pass(
+    items: list[Item], utterances: list[Utterance], meta: MeetingMeta | None
+) -> tuple[list[Item], list[str]]:
+    ctx = build_ctx(utterances, meta)
+    warnings: list[str] = []
+    prepared = [it for o in items if (it := _prepare(o, ctx.by_id, warnings)) is not None]
+    plans = plan_a1(prepared, ctx, warnings)
+    adjs = {id(it): _process_item(it, ctx, plans[id(it)], warnings) for it in prepared}
+    for it in prepared:
+        _score(it, utterances, meta, adjs[id(it)])  # preliminary: picks the winner of a merge
+    kept, merge_warnings = merge_duplicates(prepared, ctx.position)
+    warnings.extend(merge_warnings)
+    apply_siblings(kept, adjs, ctx)
+    for it in kept:
+        adj = adjs[id(it)]
+        _score(it, utterances, meta, adj)
+        if it.confidence < LOW_CONFIDENCE:
+            add_flag(it, "low_confidence")
+        write_signal_check(it, adj)
+    return _assign_ids(kept, ctx.position), warnings
+
+
+def apply_rules(
+    items: list[Item], utterances: list[Utterance], meta: MeetingMeta | None = None
+) -> tuple[list[Item], list[str]]:
+    """Return (checked & sorted items with ids, warnings).
+
+    The pass is repeated until the result stops changing (merging duplicates or a code demotion can change what the
+    next pass derives), so ``apply_rules(apply_rules(x))`` equals ``apply_rules(x)``.
+    """
+    warnings: list[str] = []
+    current, signature = items, None
+    for _ in range(MAX_PASSES):
+        current, found = _single_pass(current, utterances, meta)
+        warnings.extend(w for w in found if w not in warnings)
+        new_signature = [it.model_dump_json() for it in current]
+        if new_signature == signature:
+            break
+        signature = new_signature
+    else:
+        warnings.append(f"{WARN_PREFIX} Quy tắc hậu kiểm chưa ổn định sau {MAX_PASSES} lượt; kết quả có thể thay đổi nếu chạy lại.")
+    warnings.extend(run_warnings(current))
+    return current, warnings
 
 
 def needs_attention(item: Item) -> bool:

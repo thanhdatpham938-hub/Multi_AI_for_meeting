@@ -75,7 +75,7 @@ def test_rule4_number_check():
 def test_rule5_authority_with_participants():
     ok, _ = run([mk()], meta=META)  # u019 is Hùng (PM), can_decide
     assert "authority_unclear" not in ok[0].flags and ok[0].confidence == pytest.approx(0.95)
-    lan, _ = run([mk(evidence=["u015"])], meta=META)
+    lan, _ = run([mk(evidence=["u014"])], meta=META)  # u014: no tags (u015 is a "Hay mình..." suggestion)
     assert "authority_unclear" in lan[0].flags and lan[0].confidence == 0.6
     assert lan[0].confidence_breakdown["cap_authority"] < 0
 

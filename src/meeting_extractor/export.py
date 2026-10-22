@@ -15,6 +15,7 @@ from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 
 from .models import Item, ItemType, RunResult, Utterance
+from .signals import TAG_LABELS  # single source of tag display names
 
 REVIEWS_FILE = "reviews.json"
 EXPORTED_REVIEWS = {"accepted", "edited"}
@@ -336,7 +337,6 @@ CLARIFY_FLAGS = ("missing_owner", "unresolved_reference", "conflicting_decision"
 # High-level flags: shown as prominent badges; every other flag is a low-level note (collapsed in the table).
 HIGH_LEVEL_FLAGS = ("possible_superseded", "authority_unconfirmed", "number_not_in_evidence", "signal_mismatch",
                     "verify_failed", "conflicting_decision", "tracker_failed")
-TAG_LABELS = {"DUA": "đùa", "CAU_HOI": "câu hỏi", "GIA_DINH": "giả định", "THUAT_LAI": "thuật lại"}
 
 
 def split_flags(flags: list[str]) -> tuple[list[str], list[str]]:

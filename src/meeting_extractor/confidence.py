@@ -60,10 +60,13 @@ def _label_terms(item: Item, w: dict) -> dict[str, float]:
     return out
 
 
-def _code_terms(item: Item, cited: list[Utterance], meta: MeetingMeta | None, w: dict) -> dict[str, float]:
+def _code_terms(
+    item: Item, cited: list[Utterance], meta: MeetingMeta | None, w: dict, closer_id: str | None = None
+) -> dict[str, float]:
     out: dict[str, float] = {}
     if item.type == ItemType.decision and cited:
-        status = closer_status(cited[-1].speaker, meta)
+        closer = next((u for u in cited if u.id == closer_id), cited[-1])
+        status = closer_status(closer.speaker, meta)
         if status == "can":
             out["closer_can_decide"] = w["closer_can_decide"]
         elif status == "cannot":
@@ -88,14 +91,23 @@ def base_score(item: Item, w: dict) -> float:
 
 
 def compute_confidence(
-    item: Item, utterances: list[Utterance], meta: MeetingMeta | None = None
+    item: Item,
+    utterances: list[Utterance],
+    meta: MeetingMeta | None = None,
+    extra: dict[str, float] | None = None,
+    closer_id: str | None = None,
 ) -> tuple[float, dict[str, float]]:
-    """Return (score clamped to [min_score, max_score], breakdown of each applied term)."""
+    """Return (score clamped to [min_score, max_score], breakdown of each applied term).
+
+    `extra` = additional named terms computed by code (signal-layer penalties), summed before the clamp.
+    `closer_id` = the utterance that closed a decision (default: the latest cited one).
+    """
     w = load_weights()
     cited = _cited(item, utterances)
     breakdown: dict[str, float] = {"base": base_score(item, w)}
     breakdown.update(_label_terms(item, w))
-    breakdown.update(_code_terms(item, cited, meta, w))
+    breakdown.update(_code_terms(item, cited, meta, w, closer_id))
+    breakdown.update(extra or {})
     raw = sum(breakdown.values())
     score = min(max(raw, w["min_score"]), w["max_score"])
     if score != raw:

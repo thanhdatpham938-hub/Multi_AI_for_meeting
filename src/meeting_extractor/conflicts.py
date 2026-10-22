@@ -107,3 +107,14 @@ def flag_conflicts(items: list[Item]) -> int:
             if CONFLICT_FLAG not in it.flags:
                 it.flags.append(CONFLICT_FLAG)
     return len(pairs)
+
+
+def sibling_pairs(items: list[Item]) -> list[tuple[Item, Item]]:
+    """Pairs of `confirmed` decisions about the same issue (two "final" answers to one question).
+
+    Same ignore set and `same_issue` as `conflict_pairs`; does not flag anything itself.
+    """
+    ignore = common_tokens(items)
+    decisions = [i for i in items if i.type.value == "decision"]
+    confirmed = [i for i in decisions if i.status is not None and i.status.value == "confirmed"]
+    return [(a, b) for idx, a in enumerate(confirmed) for b in confirmed[idx + 1:] if same_issue(a, b, ignore)]

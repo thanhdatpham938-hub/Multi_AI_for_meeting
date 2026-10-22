@@ -45,9 +45,11 @@ from eval.metrics import (  # noqa: E402
 )
 from meeting_extractor.config import load_settings  # noqa: E402
 from meeting_extractor.llm import LLMClient, LLMError, load_prompt, make_llm  # noqa: E402
+from meeting_extractor.conflicts import CONFLICT_FLAG, flag_conflicts  # noqa: E402
 from meeting_extractor.models import RunResult  # noqa: E402
 from meeting_extractor.parsing import load_meta, parse_file  # noqa: E402
 from meeting_extractor.pipeline import load_result, prompt_versions, run  # noqa: E402
+from meeting_extractor.rules import apply_rules  # noqa: E402
 
 FIXTURES = ROOT / "tests" / "fixtures"
 LONG_DIR = ROOT / "test_cases_3_muc_do (1)"
@@ -290,12 +292,26 @@ def parse_answer_specs(specs: list[str]) -> tuple[dict[str, Path], Path | None]:
     return overrides, fallback
 
 
-def rescore(paths: list[str], answer_specs: list[str], runs_dir: Path) -> tuple[dict[str, SuiteData], list[str]]:
+def reapply_rules(result: RunResult) -> RunResult:
+    """Re-run the code rules (current version) over the stored items, like the pipeline does. No API call."""
+    items, warns = apply_rules(result.items, result.utterances, result.meta)
+    for it in items:  # stale flags from the stored run must not survive the recomputation
+        it.flags = [f for f in it.flags if f != CONFLICT_FLAG]
+    flag_conflicts(items)
+    items, again = apply_rules(items, result.utterances, result.meta)
+    extra = [w for w in [*warns, *again] if w not in result.warnings]
+    return result.model_copy(update={"items": items, "warnings": [*result.warnings, *dict.fromkeys(extra)]})
+
+
+def rescore(paths: list[str], answer_specs: list[str], runs_dir: Path,
+            reapply: bool = False) -> tuple[dict[str, SuiteData], list[str]]:
     overrides, fallback = parse_answer_specs(answer_specs)
     data: dict[str, SuiteData] = {}
     notes: list[str] = []
     for hint, dirs in expand_targets(paths, runs_dir):
         results = [load_result(d) for d in dirs if (d / "result.json").exists()]
+        if reapply:
+            results = [reapply_rules(r) for r in results]
         if not results:
             notes.append(f"Bỏ qua {hint or dirs}: không có result.json.")
             continue
@@ -433,6 +449,8 @@ def build_parser() -> argparse.ArgumentParser:
                     help="Chấm lại kết quả đã lưu (latest.json hoặc thư mục runs/...), không gọi API")
     ap.add_argument("--answer", action="append", default=[], metavar="[KEY=]FILE",
                     help="Chỉ định đáp án cho --rescore; KEY là một phần run_id hoặc tên ca")
+    ap.add_argument("--reapply-rules", action="store_true",
+                    help="Với --rescore: áp lại quy tắc code hiện tại (rules.apply_rules) lên kết quả đã lưu trước khi chấm")
     ap.add_argument("--out", default="", help="Với --rescore: ghi bảng ra file markdown này")
     return ap
 
@@ -512,7 +530,7 @@ def finish(args: argparse.Namespace, jobs: list[Job], data: dict[str, SuiteData]
 def main_rescore(args: argparse.Namespace) -> int:
     runs_dir = load_settings().runs_dir  # reading .env is fine; no key is needed
     try:
-        data, notes = rescore(args.rescore, args.answer, runs_dir)
+        data, notes = rescore(args.rescore, args.answer, runs_dir, reapply=args.reapply_rules)
     except FileNotFoundError as exc:
         print(f"Lỗi: {exc}", file=sys.stderr)
         return 2
@@ -522,6 +540,10 @@ def main_rescore(args: argparse.Namespace) -> int:
     lines = [f"# Chấm lại offline – {datetime.now():%Y-%m-%d %H:%M}", "",
              "Không gọi API; khớp mục chỉ theo evidence (không dùng LLM so khớp). Các run cũ chưa có nhãn mới "
              "nên chỉ số mới ở mức 0% hoặc `không áp dụng` là đúng thực tế.", ""]
+    if args.reapply_rules:
+        lines += ["> **Áp lại quy tắc code (`--reapply-rules`):** các run này do AI sinh ra trước khi có lớp tín hiệu. "
+                  "Ở đây chỉ áp lại `rules.apply_rules` hiện tại (bộ dò tín hiệu, A1, P3, P1, gộp mục trùng, N1) lên kết quả AI cũ. "
+                  "Chưa có phần gợi ý `<code_signals>` cho Agent 3 (S4) và chưa có lượt chạy mới; không gọi API.", ""]
     lines += render_all(data)
     lines += [f"- {n}" for n in notes]
     report_md = "\n".join(lines)

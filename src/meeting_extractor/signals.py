@@ -392,13 +392,26 @@ def tags_of(signals: list[Signal]) -> set[str]:
 def closing_utterance_id(
     evidence: list[str], tagged: dict[str, list[Signal]], position: dict[str, int]
 ) -> str | None:
-    """Latest evidence utterance carrying a group A tag; else the latest evidence utterance."""
+    """The utterance that closes an item.
+
+    Preference: latest CHOT_RO without a group B tag, then latest CHOT_NGAM, then latest DONG_Y_NGAN, then the latest
+    evidence utterance. A trailing "Ok." therefore never outranks an earlier explicit "chốt".
+    """
     valid = [e for e in evidence if e in position]
     if not valid:
         return None
-    group_a = [e for e in valid if tags_of(tagged.get(e, [])) & GROUP_A]
-    pool = group_a or valid
-    return max(pool, key=lambda e: position[e])
+    tag_sets = {e: tags_of(tagged.get(e, [])) for e in valid}
+    tiers = (
+        lambda t: "CHOT_RO" in t and not t & GROUP_B,
+        lambda t: "CHOT_NGAM" in t,
+        lambda t: "DONG_Y_NGAN" in t,
+        lambda t: True,
+    )
+    for accepts in tiers:
+        pool = [e for e in valid if accepts(tag_sets[e])]
+        if pool:
+            return max(pool, key=lambda e: position[e])
+    return None
 
 
 def _clean_phrase(phrase: str) -> str:
