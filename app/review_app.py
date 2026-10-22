@@ -28,6 +28,8 @@ from meeting_extractor.export import (  # noqa: E402
     REVIEW_LABELS,
     SCOPE_LABELS,
     STATUS_LABELS,
+    signal_notes,
+    split_flags,
     answer_edits,
     apply_reviews,
     clarification_items,
@@ -184,8 +186,22 @@ def status_badge(item: Item) -> str:
     return badge(STATUS_LABELS.get(item.status.value, item.status.value), STATUS_STYLE.get(item.status.value, ("#eee", "#333")))
 
 
-def flag_badges(item: Item) -> str:
-    return "".join(badge(FLAG_LABELS.get(f, f), FLAG_STYLE.get(f, ("#eee", "#333")), wrap=True) for f in item.flags)
+LOW_NOTE_STYLE = ("#f2f4f7", "#667085")
+
+
+def _one_flag_badge(flag: str) -> str:
+    return badge(FLAG_LABELS.get(flag, flag), FLAG_STYLE.get(flag, ("#eee", "#333")), wrap=True)
+
+
+def flag_badges(item: Item, collapse_low: bool = True) -> str:
+    """High-level flags as badges; low-level ones collapse into one faint '+n ghi chú' badge."""
+    high, low = split_flags(item.flags)
+    if not collapse_low:
+        return "".join(_one_flag_badge(f) for f in item.flags)
+    out = "".join(_one_flag_badge(f) for f in high)
+    if low:
+        out += badge(f"+{len(low)} ghi chú", LOW_NOTE_STYLE, wrap=True)
+    return out
 
 
 def esc(text: Any) -> str:
@@ -262,11 +278,19 @@ TERM_LABELS = {
     "verify_failed": "kiểm chứng không đạt", "multi_evidence": "nhiều câu bằng chứng",
     "contradicted_later": "bị phản bác sau đó", "noisy_evidence": "ghi âm không rõ",
     "in_summary": "được nhắc trong câu tóm lại",
+    "signal_strong_conflict": "lệch tín hiệu code (mạnh)", "signal_weak_conflict": "lệch tín hiệu code (nhẹ)",
+    "signal_reversal_penalty": "có câu đảo ý ngay sau câu chốt",
+    "number_not_in_evidence_penalty": "số không có trong câu gốc",
 }
 # keys that are limits (caps / clamp), not terms of the sum
 CAP_LABELS = {
     "cap_authority": "trần: chưa rõ thẩm quyền", "cap_verify_failed": "trần: kiểm chứng không đạt",
-    "cap_tracker_failed": "trần: chủ đề lỗi khi phân tích", "clamp": "giới hạn thang điểm",
+    "cap_tracker_failed": "trần: chủ đề lỗi khi phân tích",
+    "cap_signal_unverified": "trần: code không thấy từ chốt",
+    "cap_signal_short_ack": "trần: câu chốt chỉ là lời đồng ý ngắn",
+    "cap_possible_action": "trần: có thể là việc cần làm",
+    "cap_possible_superseded": "trần: có thể đã bị thay thế",
+    "cap_superseded_sibling": "trần: có quyết định khác thay thế cùng vấn đề", "clamp": "giới hạn thang điểm",
 }
 
 
@@ -748,6 +772,30 @@ def render_evidence(item: Item, result: RunResult) -> None:
         st.markdown(against, unsafe_allow_html=True)
 
 
+def code_check_html(item: Item, result: RunResult) -> str:
+    """HTML lines for signal_check.notes (note text, plus the quoted utterance when it exists); '' when none."""
+    by_id = {u.id: u for u in result.utterances}
+    rows: list[str] = []
+    for note in signal_notes(item):
+        text = note.get("text")
+        if not isinstance(text, str) or not text.strip():
+            continue
+        row = f"• {md_safe(text)}"
+        u = by_id.get(note.get("utterance"))
+        if u:
+            row += (f"<br><small>{md_safe(u.id)} · {md_safe(u.time)} <b>{md_safe(u.speaker)}</b>: "
+                    f"“{md_safe(u.text)}”</small>")
+        rows.append(f"<div style='margin-bottom:.4rem'>{row}</div>")
+    return "".join(rows)
+
+
+def render_code_check(item: Item, result: RunResult) -> None:
+    html_rows = code_check_html(item, result)
+    if html_rows:
+        st.markdown("**Kiểm tra bằng code**")
+        st.markdown(html_rows, unsafe_allow_html=True)
+
+
 def render_related(item: Item, result: RunResult) -> None:
     related = related_summaries(item, result)
     if not related:
@@ -764,7 +812,8 @@ def item_dialog(run_dir: Path, result: RunResult, item_id: str) -> None:
     by_id = {u.id: u for u in result.utterances}
     st.markdown(f"**{item.item_id} · {TYPE_LABEL[item.type]}** — {esc(item.topic)}")
     st.markdown(f"### {md_safe(item.content)}", unsafe_allow_html=True)
-    st.markdown(status_badge(item) + flag_badges(item)
+    high_flags, low_flags = split_flags(item.flags)
+    st.markdown(status_badge(item) + "".join(_one_flag_badge(f) for f in high_flags)
                 + badge(REVIEW_LABELS.get(item.review, item.review), REVIEW_STYLE[item.review]),
                 unsafe_allow_html=True)
     info = []
@@ -785,6 +834,10 @@ def item_dialog(run_dir: Path, result: RunResult, item_id: str) -> None:
             st.markdown(explanation, unsafe_allow_html=True)
     else:
         st.caption("Độ tin cậy: chưa có phân tích chi tiết (kết quả chạy trước khi có tính năng này).")
+    if low_flags:
+        with st.expander(f"Ghi chú khác ({len(low_flags)})"):
+            st.markdown("".join(_one_flag_badge(f) for f in low_flags), unsafe_allow_html=True)
+    render_code_check(item, result)
     clip = audio_clip_for(item, result, run_dir)
     if clip:
         render_audio_player(clip)
@@ -887,6 +940,13 @@ def meeting_panel(run_dir: Path, raw: RunResult, result: RunResult, reviews: dic
         st.json(result.prompt_versions, expanded=False)
 
 
+SIGNAL_WARNING_PREFIX = "[Cảnh báo cờ]"
+
+
+def signal_run_warnings(result: RunResult) -> list[str]:
+    return [w for w in result.warnings if w.startswith(SIGNAL_WARNING_PREFIX)]
+
+
 def failed_topics_banner(run_dir: Path, result: RunResult) -> bool:
     """Show a red error for topics that failed; return True when quick-approve may be used."""
     if not result.failed_topics:
@@ -954,6 +1014,9 @@ REASON_BADGES = {
     "missing_owner": "Thiếu người phụ trách", "unresolved_reference": "Tham chiếu chưa rõ",
     "conflicting_decision": "Quyết định mâu thuẫn", "needs_recheck": "Cần kiểm tra lại",
     "quote_mismatch": "Trích dẫn không khớp", "no_follow_up": "Chưa có người theo dõi",
+    "signal_mismatch": "Lệch tín hiệu code/AI", "possible_action": "Có thể là việc cần làm",
+    "possible_closing": "Có thể đã chốt", "possible_superseded": "Có thể đã bị thay thế",
+    "authority_unconfirmed": "Người chốt chưa được xác nhận", "number_not_in_evidence": "Số không có trong câu gốc",
 }
 
 
@@ -1043,6 +1106,8 @@ def page_run() -> None:
                     unsafe_allow_html=True)
         st.write("")
         failed_ack = failed_topics_banner(run_dir, raw)
+        for w in signal_run_warnings(raw):
+            st.warning(md_safe(w))
         _, a1, a2, a3, a4 = st.columns([2.2, 1, 1, 1, 1.5])
         if a1.button("↻ Tải lại", use_container_width=True):
             st.session_state.pop(f"reviews::{run_dir}", None)

@@ -330,7 +330,25 @@ def related_summaries(item: Item, result: RunResult, max_len: int = 80) -> list[
 
 # ---------------------------------------------------------------- clarification questions (pure helpers)
 
-CLARIFY_FLAGS = ("missing_owner", "unresolved_reference", "conflicting_decision", "needs_recheck", "quote_mismatch")
+CLARIFY_FLAGS = ("missing_owner", "unresolved_reference", "conflicting_decision", "needs_recheck", "quote_mismatch",
+                 "signal_mismatch", "possible_action", "possible_closing", "possible_superseded",
+                 "authority_unconfirmed", "number_not_in_evidence")
+# High-level flags: shown as prominent badges; every other flag is a low-level note (collapsed in the table).
+HIGH_LEVEL_FLAGS = ("possible_superseded", "authority_unconfirmed", "number_not_in_evidence", "signal_mismatch",
+                    "verify_failed", "conflicting_decision", "tracker_failed")
+TAG_LABELS = {"DUA": "đùa", "CAU_HOI": "câu hỏi", "GIA_DINH": "giả định", "THUAT_LAI": "thuật lại"}
+
+
+def split_flags(flags: list[str]) -> tuple[list[str], list[str]]:
+    """(high-level flags, low-level flags), each keeping the original order."""
+    return ([f for f in flags if f in HIGH_LEVEL_FLAGS], [f for f in flags if f not in HIGH_LEVEL_FLAGS])
+
+
+def signal_notes(item: Item) -> list[dict[str, Any]]:
+    """Well-formed notes from item.signal_check (tolerates empty / malformed data)."""
+    check = item.signal_check if isinstance(item.signal_check, dict) else {}
+    notes = check.get("notes")
+    return [n for n in notes if isinstance(n, dict)] if isinstance(notes, list) else []
 NO_FOLLOW_UP = "no_follow_up"  # pseudo-reason: deferred / conditional item nobody follows up
 _NUMBER_RE = re.compile(
     r"\d[\d.,/]*\s?(?:triệu|tỷ|nghìn|ngàn|%|đồng|vnđ|vnd|usd|k|phút|giờ|ngày|tuần|tháng)?(?!\w)", re.IGNORECASE
@@ -383,9 +401,68 @@ def _other_decision_text(item: Item, result: RunResult) -> str:
     return "một quyết định khác trong cuộc họp"
 
 
+def _utt_text(result: RunResult, uid: Any) -> tuple[str, str] | None:
+    """(text, time) of utterance `uid`, or None when unknown."""
+    for u in result.utterances:
+        if u.id == uid:
+            return u.text, u.time
+    return None
+
+
+def _closing_uid(item: Item) -> str | None:
+    check = item.signal_check if isinstance(item.signal_check, dict) else {}
+    uid = check.get("closing_utterance")
+    return uid if isinstance(uid, str) and uid else (item.evidence[-1] if item.evidence else None)
+
+
+def _note_utterance(item: Item, rules: tuple[str, ...]) -> str | None:
+    for n in signal_notes(item):
+        if n.get("rule") in rules and isinstance(n.get("utterance"), str) and n["utterance"]:
+            return n["utterance"]
+    return None
+
+
+def _signal_clarification(item: Item, reason: str, result: RunResult, content: str) -> str | None:
+    """Question for the signal-layer flags; falls back to a generic question when data is missing."""
+    check = item.signal_check if isinstance(item.signal_check, dict) else {}
+    closing = _utt_text(result, _closing_uid(item))
+    if reason == "signal_mismatch":
+        tags = check.get("tags") if isinstance(check.get("tags"), dict) else {}
+        labels = [TAG_LABELS.get(code, str(phrase)) for code, phrase in tags.items()]
+        if closing and labels:
+            return (f"Câu '{_short(closing[0])}' có dấu hiệu {', '.join(labels)} – "
+                    "đây có thật là quyết định đã chốt không?")
+        return f"Code và AI hiểu khác nhau về '{content}' – trạng thái đúng là gì?"
+    if reason == "possible_action":
+        return f"'{content}' là quyết định hay việc giao cho {item.owner or 'ai đó'}?"
+    if reason == "possible_closing":
+        found = _utt_text(result, _note_utterance(item, ("possible_closing",))) or closing
+        quote = _short(found[0]) if found else _first_quote(item, result)
+        return f"Câu '{quote}' có phải là câu chốt cho '{content}' không?"
+    if reason == "possible_superseded":
+        found = _utt_text(result, _note_utterance(item, ("reversal", "sibling")))
+        if found:
+            return f"Câu '{_short(found[0])}' ở phút {found[1]} có phải đã thay đổi quyết định này không?"
+        return f"Có câu nào sau đó đã thay đổi quyết định '{content}' không?"
+    if reason == "authority_unconfirmed":
+        by_id = {u.id: u.speaker for u in result.utterances}
+        who = by_id.get(_closing_uid(item) or "", "Người chốt")
+        return f"'{who}' không có quyền chốt. Quyết định này đã được ai xác nhận chưa?"
+    if reason == "number_not_in_evidence":
+        missing = check.get("missing_numbers")
+        number = str(missing[0]) if isinstance(missing, list) and missing else _number_in(item.content)
+        if number:
+            return f"Số '{number}' không có trong câu gốc. Số đúng là bao nhiêu?"
+        return f"Có số trong '{content}' không có trong câu gốc. Số đúng là bao nhiêu?"
+    return None
+
+
 def clarification_question(item: Item, reason: str, result: RunResult) -> str:
     """Vietnamese follow-up question for one reason, from a fixed template (no AI)."""
     content = _short(item.content)
+    signal_question = _signal_clarification(item, reason, result, content)
+    if signal_question:
+        return signal_question
     if reason == "missing_owner":
         return f"Ai chịu trách nhiệm: {content}?"
     if reason == "unresolved_reference":

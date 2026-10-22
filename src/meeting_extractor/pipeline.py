@@ -19,7 +19,7 @@ from .agents.verifier import apply_contradiction, needs_verification, verify
 from .audio import save_audio, transcribe_with_warnings
 from .config import PROMPTS_DIR, Settings, load_settings
 from .llm import LLMClient, LLMError, load_prompt, make_llm
-from .models import Item, MeetingMeta, RunResult, Topic, Utterance
+from .models import HistoryEntry, Item, ItemType, MeetingMeta, RunResult, Status, Topic, Utterance
 from .parsing import parse_file, parse_text
 from .conflicts import flag_conflicts
 from .rules import apply_rules
@@ -113,7 +113,8 @@ def _track_or_fallback(
     return res.items, res.warnings, False, res.dropped_items > 0
 
 
-SIMILARITY_MIN = 0.5
+OVERLAP_MIN = 0.6
+DEMOTION_REASON = "Kiểm chứng không đạt và lần làm lại không còn giữ kết luận này"
 
 
 def _tokens(text: str) -> set[str]:
@@ -121,16 +122,27 @@ def _tokens(text: str) -> set[str]:
 
 
 def _same_issue(a: Item, b: Item) -> bool:
-    """Same issue = same type AND overlapping evidence AND similar content (token Jaccard >= 0.5).
+    """Same issue = same type AND shared evidence AND similar content.
 
-    Content must agree too: two different decisions can cite the same utterance.
+    "Similar" = token overlap against the SHORTER content, |A&B| / min(|A|, |B|) >= 0.6, so a
+    retry that merely trims a longer first-pass sentence still matches. Content must always agree,
+    even with identical evidence: two different decisions can cite the same utterance.
     """
     if a.type != b.type or not (set(a.evidence) & set(b.evidence)):
         return False
     ta, tb = _tokens(a.content), _tokens(b.content)
     if not ta or not tb:
         return False
-    return len(ta & tb) / len(ta | tb) >= SIMILARITY_MIN
+    return len(ta & tb) / min(len(ta), len(tb)) >= OVERLAP_MIN
+
+
+def _demote_unconfirmed(item: Item) -> Item:
+    """A decision that failed verification and was not re-affirmed by the retry cannot stay confirmed."""
+    if item.type != ItemType.decision or item.status != Status.confirmed:
+        return item
+    entry = HistoryEntry(status=Status.proposed, content=item.content, reason=DEMOTION_REASON,
+                         evidence=list(item.evidence))
+    return item.model_copy(update={"status": Status.proposed, "history": [*item.history, entry]})
 
 
 def _merge_retry(
@@ -164,7 +176,14 @@ def _merge_retry(
     warnings += errors
     unmatched = [c for c in failed_first if not any(_same_issue(r, c[0]) for r in replacements)]
     final = _finalize([(i, ok, r) for i, ok, r in first if ok is not False], False)
-    final += _finalize(checks, True) + _finalize(unmatched, True)
+    flagged = _finalize(unmatched, True)
+    demoted = [_demote_unconfirmed(i) for i in flagged]
+    final += _finalize(checks, True) + demoted
+    warnings += [
+        f"Chủ đề {topic.topic_id} ({topic.title}): hạ \"{b.content}\" từ confirmed về proposed vì kiểm chứng "
+        "không đạt và lần làm lại không còn giữ kết luận này."
+        for b, a in zip(flagged, demoted) if a.status != b.status
+    ]
     if unmatched and replacements:
         warnings.append(
             f"Chủ đề {topic.topic_id} ({topic.title}): {len(unmatched)} mục chưa được sửa ở lần làm lại, "

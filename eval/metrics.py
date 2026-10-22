@@ -92,17 +92,23 @@ def owner_accepted(exp: dict[str, Any], owner: str | None) -> bool:
 
 
 def match_items(expected: list[dict[str, Any]], items: list[Item], judge: ContentJudge | None = None) -> list[Match]:
-    """Greedy one-to-one: same type + evidence overlap first, then optional content judge."""
+    """Greedy one-to-one: same type + evidence overlap first, then optional content judge.
+
+    Ties on overlap go to the item whose status the answer accepts (decisions only), then to the
+    earlier item.
+    """
     used: set[int] = set()
     matches: list[Match] = []
     for exp in expected:
-        best, best_overlap = None, 0
+        best, best_key = None, (0, False)
+        wanted = accepted_statuses(exp) if exp["type"] == "decision" else set()
         for idx, it in enumerate(items):
             if idx in used or it.type.value != exp["type"]:
                 continue
             overlap = len(set(it.evidence) & set(exp["evidence"]))
-            if overlap > best_overlap:
-                best, best_overlap = idx, overlap
+            key = (overlap, bool(it.status) and it.status.value in wanted)
+            if overlap > 0 and key > best_key:
+                best, best_key = idx, key
         if best is not None:
             used.add(best)
             matches.append(Match(exp, items[best], "evidence"))
