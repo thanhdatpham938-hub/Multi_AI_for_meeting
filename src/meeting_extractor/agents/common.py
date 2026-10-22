@@ -7,8 +7,17 @@ from collections.abc import Iterable
 from ..models import MeetingMeta, Utterance
 
 
+# Angle brackets in spoken text become look-alikes so a transcript line cannot close or fake a
+# prompt tag such as </transcript> or <code_signals>.
+_ANGLE_SAFE = str.maketrans({"<": "‹", ">": "›"})
+
+
+def safe_text(text: str) -> str:
+    return text.translate(_ANGLE_SAFE)
+
+
 def format_utterances(utterances: Iterable[Utterance]) -> str:
-    return "\n".join(f"{u.id} [{u.time}] {u.speaker}: {u.text}" for u in utterances)
+    return "\n".join(f"{u.id} [{u.time}] {safe_text(u.speaker)}: {safe_text(u.text)}" for u in utterances)
 
 
 def format_agenda(meta: MeetingMeta | None) -> str:

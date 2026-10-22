@@ -135,7 +135,10 @@
       ],
       "exceptions": ["không đùa", "không phải đùa", "chẳng đùa", "không giỡn", "không phải giỡn"]
     },
-    "NGU_CANH_DUA": {"_comment": "computed from the previous utterance; no phrases"},
+    "NGU_CANH_DUA": {
+      "_comment": "computed from the previous utterance; a previous line that STOPS the joke does not carry it over",
+      "joke_enders": ["đừng đùa", "thôi đùa", "không đùa nữa", "đùa thôi", "bỏ đùa", "nghiêm túc"]
+    },
     "GIA_DINH": {
       "phrases": ["hay là", "giả sử", "giả dụ", "nếu mà", "lỡ mà", "thử tưởng tượng"],
       "hay_lead_particles": ["ừ", "ờ", "à", "thế", "vậy", "thôi", "rồi", "dạ", "ok", "mà"],

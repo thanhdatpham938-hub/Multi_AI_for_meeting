@@ -23,6 +23,7 @@ from ..models import (
     TrackedItem,
     Utterance,
 )
+from ..signals import format_signals_block, tag_transcript
 from .common import format_participants, format_utterances, select
 
 TRACKER_FLAGS = {"no_closing_signal", "unresolved_reference"}
@@ -83,6 +84,7 @@ def track_detailed(
     Raises LLMError (or TrackerFailed) when Agent 3 produced nothing usable.
     """
     prompt = load_prompt("track")
+    signals_block = format_signals_block(topic.utterance_ids, tag_transcript(utterances, meta))
     fb = ""
     if feedback:
         fb = f"\nLưu ý từ bước kiểm chứng (kết quả lần trước bị đánh giá sai, hãy sửa):\n{feedback}\n"
@@ -94,6 +96,7 @@ def track_detailed(
         CANDIDATES=format_candidates(candidates),
         FEEDBACK=fb,
         DIGEST=format_digest_block(digest),
+        SIGNALS=(signals_block + "\n") if signals_block else "",
     )
     raw = llm.complete_json(model=model, system=prompt.system, user=user, schema=RawTrackOutput, purpose="track")
     if candidates and not raw.items:

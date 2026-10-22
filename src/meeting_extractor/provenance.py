@@ -15,8 +15,12 @@ _EDGE_PUNCT = string.punctuation + "…“”‘’«»–—"
 
 
 def normalize_text(text: str) -> str:
-    """Lowercase, collapse whitespace, strip edge punctuation. Keeps Vietnamese diacritics."""
-    text = unicodedata.normalize("NFC", text).lower()
+    """Lowercase, collapse whitespace, strip edge punctuation. Keeps Vietnamese diacritics.
+
+    The look-alike angle brackets the prompts use (agents.common.safe_text) count as the real ones,
+    so a quote copied from the prompt still matches the original utterance.
+    """
+    text = unicodedata.normalize("NFC", text).replace("‹", "<").replace("›", ">").lower()
     text = re.sub(r"\s+", " ", text).strip()
     return text.strip(_EDGE_PUNCT + " ")
 

@@ -350,8 +350,11 @@ def tag_utterance(u: Utterance, prev: Utterance | None, names: Iterable[str]) ->
     norm = normalize(u.text)
     found = _core_tags(u, norm, name_list)
     if prev is not None:
-        prev_found = _core_tags(prev, normalize(prev.text), name_list)
-        if "DUA" in prev_found and "CHOT_RO" not in found:
+        prev_norm = normalize(prev.text)
+        prev_found = _core_tags(prev, prev_norm, name_list)
+        enders = load_lexicon()["tags"]["NGU_CANH_DUA"]["joke_enders"]
+        stops_joke = any(re.search(_phrase_regex(e), prev_norm) for e in enders)
+        if "DUA" in prev_found and "CHOT_RO" not in found and not stops_joke:
             found["NGU_CANH_DUA"] = prev_found["DUA"]
         if GROUP_A & prev_found.keys():
             opener = _opens_with(norm, load_lexicon()["tags"]["BO_SUNG_NGUOC"]["openers"])
