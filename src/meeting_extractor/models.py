@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from enum import Enum
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -18,6 +19,13 @@ VALID_FLAGS = (
     "unresolved_reference",
     "needs_recheck",
     "quote_mismatch",
+    # Code signal layer (PLAN_SIGNALS.md): set by rules.py from signals.py, never by the AI.
+    "signal_mismatch",
+    "possible_action",
+    "possible_closing",
+    "possible_superseded",
+    "authority_unconfirmed",
+    "number_not_in_evidence",
 )
 
 # Discrete labels Agent 3 assigns; code turns them into a confidence score.
@@ -128,6 +136,8 @@ class Item(BaseModel):  # final output
     pending_on: str | None = None  # deferred/conditional: what or whom the item waits for
     follow_up_owner: str | None = None  # who follows up an unresolved item
     related_items: list[str] = []  # item_ids of linked items (decision -> actions, blocker -> decision)
+    # Code signal check: closing utterance, its tags, matched phrases and the verdict (written by rules.py).
+    signal_check: dict[str, Any] = {}
 
 
 class RunResult(BaseModel):

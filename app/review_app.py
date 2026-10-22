@@ -99,6 +99,9 @@ FLAG_STYLE = {
     "tracker_failed": ("#fde8e8", "#b42318"), "conflicting_decision": ("#fff3e0", "#b45f06"),
     "unresolved_reference": ("#f1ebfb", "#6b3fb3"), "needs_recheck": ("#e8f0fe", "#1a56c4"),
     "quote_mismatch": ("#fde8e8", "#b42318"),
+    "signal_mismatch": ("#fde8e8", "#b42318"), "possible_action": ("#fdf6d8", "#8a6d00"),
+    "possible_closing": ("#f1ebfb", "#6b3fb3"), "possible_superseded": ("#fff3e0", "#b45f06"),
+    "authority_unconfirmed": ("#fde8e8", "#b42318"), "number_not_in_evidence": ("#fde8e8", "#b42318"),
 }
 REVIEW_STYLE = {
     "pending": ("#f2f4f7", "#475467"), "accepted": ("#e7f6ec", "#1e7b3c"),

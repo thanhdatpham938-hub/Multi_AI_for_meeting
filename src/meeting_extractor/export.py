@@ -50,6 +50,12 @@ FLAG_LABELS = {
     "unresolved_reference": "Tham chiếu chưa rõ",
     "needs_recheck": "Cần kiểm tra lại",
     "quote_mismatch": "Trích dẫn không khớp",
+    "signal_mismatch": "Lệch tín hiệu code/AI",
+    "possible_action": "Có thể là việc cần làm",
+    "possible_closing": "Có thể đã chốt",
+    "possible_superseded": "Có thể đã bị thay thế",
+    "authority_unconfirmed": "Người chốt không có quyền, chưa ai xác nhận",
+    "number_not_in_evidence": "Số không có trong câu gốc",
 }
 COMMITMENT_LABELS = {
     "assigned": "Được giao việc",

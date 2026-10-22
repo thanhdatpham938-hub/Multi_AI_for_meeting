@@ -25,5 +25,14 @@
   "max_score": 0.98,
   "cap_authority": 0.6,
   "cap_verify_failed": 0.5,
-  "cap_tracker_failed": 0.3
+  "cap_tracker_failed": 0.3,
+  "signal_strong_conflict": -0.25,
+  "signal_weak_conflict": -0.15,
+  "signal_reversal_penalty": -0.2,
+  "number_not_in_evidence_penalty": -0.2,
+  "cap_signal_unverified": 0.65,
+  "cap_signal_short_ack": 0.6,
+  "cap_possible_action": 0.65,
+  "cap_possible_superseded": 0.6,
+  "cap_superseded_sibling": 0.65
 }
