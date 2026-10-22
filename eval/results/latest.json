@@ -1,84 +1,273 @@
 {
   "metrics": {
-    "false_confirm_rate": 0.0,
+    "false_confirm_rate": 0.3333333333333333,
     "decision_recall": 1.0,
-    "action_precision": 0.6,
+    "action_precision": 0.6666666666666666,
     "citation_accuracy": 1.0,
-    "fabricated_fields": 1.0,
-    "stability_change_rate": 0.0
+    "fabricated_fields": 0.0
+  },
+  "metrics_by_suite": {
+    "short": {
+      "false_confirm_rate": {
+        "value": 0.3333333333333333,
+        "samples": 3
+      },
+      "decision_recall": {
+        "value": 1.0,
+        "samples": 5
+      },
+      "action_precision": {
+        "value": 0.6666666666666666,
+        "samples": 6
+      },
+      "citation_accuracy": {
+        "value": 1.0,
+        "samples": 10
+      },
+      "fabricated_fields": {
+        "value": 0.0,
+        "samples": 10
+      },
+      "unresolved_status_accuracy": {
+        "value": 1.0,
+        "samples": 3
+      },
+      "quote_validity": {
+        "value": 1.0,
+        "samples": 34
+      },
+      "field_provenance": {
+        "value": 1.0,
+        "samples": 8
+      },
+      "knowledge_scope_accuracy": {
+        "value": null,
+        "samples": 0
+      },
+      "unflagged_conflicts": {
+        "value": 0.0,
+        "samples": 9
+      },
+      "expected_flags_met": {
+        "value": 1.0,
+        "samples": 1
+      }
+    },
+    "long": {
+      "false_confirm_rate": {
+        "value": 0.8181818181818182,
+        "samples": 11
+      },
+      "decision_recall": {
+        "value": 0.9,
+        "samples": 10
+      },
+      "action_precision": {
+        "value": 0.6470588235294118,
+        "samples": 17
+      },
+      "citation_accuracy": {
+        "value": 0.9615384615384616,
+        "samples": 26
+      },
+      "fabricated_fields": {
+        "value": 0.0,
+        "samples": 26
+      },
+      "unresolved_status_accuracy": {
+        "value": 1.0,
+        "samples": 4
+      },
+      "quote_validity": {
+        "value": 1.0,
+        "samples": 67
+      },
+      "field_provenance": {
+        "value": 1.0,
+        "samples": 23
+      },
+      "knowledge_scope_accuracy": {
+        "value": 0.6,
+        "samples": 5
+      },
+      "unflagged_conflicts": {
+        "value": 0.0,
+        "samples": 25
+      },
+      "expected_flags_met": {
+        "value": null,
+        "samples": 0
+      }
+    },
+    "total": {
+      "false_confirm_rate": {
+        "value": 0.7142857142857143,
+        "samples": 14
+      },
+      "decision_recall": {
+        "value": 0.9333333333333333,
+        "samples": 15
+      },
+      "action_precision": {
+        "value": 0.6521739130434783,
+        "samples": 23
+      },
+      "citation_accuracy": {
+        "value": 0.9722222222222222,
+        "samples": 36
+      },
+      "fabricated_fields": {
+        "value": 0.0,
+        "samples": 36
+      },
+      "unresolved_status_accuracy": {
+        "value": 1.0,
+        "samples": 7
+      },
+      "quote_validity": {
+        "value": 1.0,
+        "samples": 101
+      },
+      "field_provenance": {
+        "value": 1.0,
+        "samples": 31
+      },
+      "knowledge_scope_accuracy": {
+        "value": 0.6,
+        "samples": 5
+      },
+      "unflagged_conflicts": {
+        "value": 0.0,
+        "samples": 34
+      },
+      "expected_flags_met": {
+        "value": 1.0,
+        "samples": 1
+      }
+    }
   },
   "cases": {
     "TC1": {
-      "passed": true,
-      "errors": [],
+      "passed": false,
+      "errors": [
+        "Action thừa: [a01] \"Lan chuẩn bị số liệu chi phí cho phương án on-premise\" owner=Lan"
+      ],
       "counts": {
         "confirmed_total": 1,
         "confirmed_wrong": 0,
         "exp_decisions": 1,
         "exp_decisions_matched": 1,
-        "actions_total": 0,
+        "actions_total": 1,
         "actions_matched": 0,
         "matched_total": 1,
         "matched_cited": 1,
-        "fabricated": 0
-      }
+        "fabricated": 0,
+        "unres_total": 0,
+        "unres_ok": 0,
+        "quote_total": 7,
+        "quote_ok": 7,
+        "prov_total": 1,
+        "prov_ok": 1,
+        "scope_total": 0,
+        "scope_ok": 0,
+        "decisions_total": 1,
+        "conflicts_unflagged": 0,
+        "flags_expected": 0,
+        "flags_met": 0
+      },
+      "suite": "short"
     },
     "TC2": {
       "passed": false,
       "errors": [
-        "Bỏ sót action: \"Xem lại phần test tải\""
+        "Chốt nhầm: [d01] \"Minh xin nghỉ buổi chiều thứ Năm được chấp thuận\" evidence=['u014']"
       ],
       "counts": {
-        "confirmed_total": 0,
-        "confirmed_wrong": 0,
+        "confirmed_total": 1,
+        "confirmed_wrong": 1,
         "exp_decisions": 0,
         "exp_decisions_matched": 0,
-        "actions_total": 1,
-        "actions_matched": 1,
-        "matched_total": 1,
-        "matched_cited": 1,
-        "fabricated": 0
-      }
+        "actions_total": 2,
+        "actions_matched": 2,
+        "matched_total": 2,
+        "matched_cited": 2,
+        "fabricated": 0,
+        "unres_total": 0,
+        "unres_ok": 0,
+        "quote_total": 7,
+        "quote_ok": 7,
+        "prov_total": 2,
+        "prov_ok": 2,
+        "scope_total": 0,
+        "scope_ok": 0,
+        "decisions_total": 1,
+        "conflicts_unflagged": 0,
+        "flags_expected": 0,
+        "flags_met": 0
+      },
+      "suite": "short"
     },
     "TC3": {
-      "passed": false,
-      "errors": [
-        "Lịch sử thiếu \"Ra mắt beta ngày 1/11\" superseded trong \"Ra mắt bản beta ngày 15/11\"",
-        "Action thừa: [a01] \"Nam hỗ trợ phỏng vấn vòng kỹ thuật nếu cần\" owner=Nam",
-        "Action thừa: [a02] \"Khởi động lại server staging\" owner=Minh"
-      ],
+      "passed": true,
+      "errors": [],
       "counts": {
         "confirmed_total": 1,
         "confirmed_wrong": 0,
         "exp_decisions": 1,
         "exp_decisions_matched": 1,
-        "actions_total": 3,
+        "actions_total": 1,
         "actions_matched": 1,
         "matched_total": 3,
         "matched_cited": 3,
-        "fabricated": 0
-      }
+        "fabricated": 0,
+        "unres_total": 1,
+        "unres_ok": 1,
+        "quote_total": 9,
+        "quote_ok": 9,
+        "prov_total": 2,
+        "prov_ok": 2,
+        "scope_total": 0,
+        "scope_ok": 0,
+        "decisions_total": 3,
+        "conflicts_unflagged": 0,
+        "flags_expected": 0,
+        "flags_met": 0
+      },
+      "suite": "short"
     },
     "TC4": {
-      "passed": true,
-      "errors": [],
+      "passed": false,
+      "errors": [
+        "Action thừa: [a01] \"Lan hỏi sếp về ngân sách marketing rồi báo lại\" owner=Lan"
+      ],
       "counts": {
         "confirmed_total": 0,
         "confirmed_wrong": 0,
         "exp_decisions": 2,
         "exp_decisions_matched": 2,
-        "actions_total": 0,
+        "actions_total": 1,
         "actions_matched": 0,
         "matched_total": 2,
         "matched_cited": 2,
-        "fabricated": 0
-      }
+        "fabricated": 0,
+        "unres_total": 2,
+        "unres_ok": 2,
+        "quote_total": 9,
+        "quote_ok": 9,
+        "prov_total": 2,
+        "prov_ok": 2,
+        "scope_total": 0,
+        "scope_ok": 0,
+        "decisions_total": 3,
+        "conflicts_unflagged": 0,
+        "flags_expected": 0,
+        "flags_met": 0
+      },
+      "suite": "short"
     },
     "TC5": {
-      "passed": false,
-      "errors": [
-        "deadline bịa: \"Tuần sau chốt dùng React cho front-end\" deadline='tuần sau'"
-      ],
+      "passed": true,
+      "errors": [],
       "counts": {
         "confirmed_total": 0,
         "confirmed_wrong": 0,
@@ -88,8 +277,21 @@
         "actions_matched": 1,
         "matched_total": 2,
         "matched_cited": 2,
-        "fabricated": 1
-      }
+        "fabricated": 0,
+        "unres_total": 0,
+        "unres_ok": 0,
+        "quote_total": 2,
+        "quote_ok": 2,
+        "prov_total": 1,
+        "prov_ok": 1,
+        "scope_total": 0,
+        "scope_ok": 0,
+        "decisions_total": 1,
+        "conflicts_unflagged": 0,
+        "flags_expected": 0,
+        "flags_met": 0
+      },
+      "suite": "short"
     },
     "TC6": {
       "passed": true,
@@ -103,91 +305,180 @@
         "actions_matched": 0,
         "matched_total": 1,
         "matched_cited": 1,
-        "fabricated": 0
-      }
+        "fabricated": 0,
+        "unres_total": 0,
+        "unres_ok": 0,
+        "quote_total": 6,
+        "quote_ok": 6,
+        "prov_total": 1,
+        "prov_ok": 1,
+        "scope_total": 0,
+        "scope_ok": 0,
+        "decisions_total": 2,
+        "conflicts_unflagged": 0,
+        "flags_expected": 0,
+        "flags_met": 0
+      },
+      "suite": "short"
     },
     "TC7": {
-      "passed": false,
-      "errors": [
-        "Action thừa: [a02] \"Báo bên toà nhà về máy lạnh hỏng\" owner=Lan"
-      ],
+      "passed": true,
+      "errors": [],
       "counts": {
         "confirmed_total": 0,
         "confirmed_wrong": 0,
         "exp_decisions": 0,
         "exp_decisions_matched": 0,
-        "actions_total": 2,
+        "actions_total": 1,
         "actions_matched": 1,
         "matched_total": 1,
         "matched_cited": 1,
-        "fabricated": 0
-      }
+        "fabricated": 0,
+        "unres_total": 0,
+        "unres_ok": 0,
+        "quote_total": 9,
+        "quote_ok": 9,
+        "prov_total": 2,
+        "prov_ok": 2,
+        "scope_total": 0,
+        "scope_ok": 0,
+        "decisions_total": 4,
+        "conflicts_unflagged": 0,
+        "flags_expected": 1,
+        "flags_met": 1
+      },
+      "suite": "short"
+    },
+    "CASE2": {
+      "passed": false,
+      "errors": [
+        "Chốt nhầm: [d02] \"Không mời Sơn Tùng vì ngân sách có hạn\" evidence=['u029']",
+        "Chốt nhầm: [d07] \"Duyệt logo mới bản màu xanh lá\" evidence=['u060']",
+        "Chốt nhầm: [d09] \"Ngọc tự quyết bài đăng giới thiệu ba vị\" evidence=['u068']",
+        "Chốt nhầm: [d10] \"Ngọc tự quyết bài đăng giới thiệu ba vị, chạy trước ngày ra mắt một tuần để tạo tò mò\" evidence=['u068']",
+        "Chốt nhầm: [d25] \"Sampling tại Coopmart thay vì Big C do phí cao gấp đôi\" evidence=['u132']",
+        "Chốt nhầm: [d08] \"Ngọc lên kịch bản series 'một ngày với TeaGo', tuần sau gửi Phương xem\" evidence=['u065']",
+        "Chốt nhầm: [d15] \"Làm trang đích đơn giản thôi\" evidence=['u092']",
+        "Chốt nhầm: [d18] \"Sales tự đề xuất chương trình khuyến mãi cho đại lý, gửi Phương duyệt\" evidence=['u104']",
+        "Chốt nhầm: [d22] \"Quay ngoài đường cho chân thật, Ngọc tự cân đối\" evidence=['u118']",
+        "Lịch sử thiếu \"Chỉ chạy TikTok\" superseded trong \"Kênh quảng cáo số: chạy cả TikTok và Facebook, TikTok 70% / Facebook 30%\"",
+        "Bỏ sót decision: \"Thuê freelancer dựng video, chi phí lấy từ ngân sách quảng cáo số\"",
+        "Sai trạng thái \"Làm trang đích đơn giản có nút tìm đại lý (hỏi IT trước, bận thì thuê ngoài)\": open, đáp án ['confirmed']",
+        "Sai trạng thái \"Content ưu tiên vị ô long\": open, đáp án ['confirmed', 'proposed']",
+        "Thiếu cờ number_check ở \"Giá bán lẻ 28 nghìn/chai\"",
+        "Sai trạng thái \"Ngày ra mắt 5/12\": deferred, đáp án ['open', 'proposed']",
+        "Sai owner \"Khoa gửi đề xuất OOH chi tiết (vị trí, báo giá) cho Bình\": 'Bình', đáp án 'Khoa'",
+        "Sai deadline \"Khoa gửi đề xuất OOH chi tiết (vị trí, báo giá) cho Bình\": None, đáp án 'tuần này'",
+        "Bỏ sót action: \"Bình trình đề xuất OOH lên giám đốc tài chính\"",
+        "Bỏ sót action: \"Ngọc lên kịch bản series 'một ngày với TeaGo' (~10 tập)\"",
+        "Sai owner \"Hà đề xuất chương trình khuyến mãi cho đại lý, gửi Phương duyệt\": None, đáp án 'Hà'",
+        "Sai deadline \"Hà đề xuất chương trình khuyến mãi cho đại lý, gửi Phương duyệt\": None, đáp án 'đầu tuần sau'",
+        "Trích dẫn lệch: \"Thuê freelancer, chi phí lấy từ phần ngân sách quảng cáo số\" evidence=['u129'], đáp án ['u094', 'u093']",
+        "Bỏ sót action: \"Ngọc làm bài đăng giới thiệu ba vị, chạy trước ra mắt 1 tuần\"",
+        "Bỏ sót request: \"Ngọc cần thêm một người dựng video nếu chạy cả hai kênh\"",
+        "Action thừa: [a08] \"Ngọc lên lịch đăng bài dự kiến\" owner=Ngọc",
+        "Action thừa: [a10] \"Ngọc đưa màu xanh lá vào hướng dẫn thiết kế\" owner=Ngọc",
+        "Action thừa: [a04] \"Khoa gửi đề xuất chi tiết biển quảng cáo trong tuần này\" owner=Khoa",
+        "Action thừa: [a09] \"Tuấn xử lý nhạc nền khác cho TikTok\" owner=Tuấn",
+        "Action thừa: [a11] \"Sales cung cấp danh sách đại lý cho trang đích\" owner=Sales",
+        "Action thừa: [a13] \"Gửi đề xuất chương trình khuyến mãi cho đại lý cho Phương đầu tuần sau\" owner=Hà",
+        "Vi phạm: mời Sơn Tùng là câu đùa, không phải quyết định → [d02] \"Không mời Sơn Tùng vì ngân sách có hạn\"",
+        "Các câu ['u030', 'u034', 'u131', 'u132'] không cùng một chủ đề (topics=['t02', 't09'])"
+      ],
+      "counts": {
+        "confirmed_total": 11,
+        "confirmed_wrong": 9,
+        "exp_decisions": 10,
+        "exp_decisions_matched": 9,
+        "actions_total": 17,
+        "actions_matched": 11,
+        "matched_total": 26,
+        "matched_cited": 25,
+        "fabricated": 0,
+        "unres_total": 4,
+        "unres_ok": 4,
+        "quote_total": 67,
+        "quote_ok": 67,
+        "prov_total": 23,
+        "prov_ok": 23,
+        "scope_total": 5,
+        "scope_ok": 3,
+        "decisions_total": 25,
+        "conflicts_unflagged": 0,
+        "flags_expected": 0,
+        "flags_met": 0
+      },
+      "suite": "long"
     }
   },
   "usage": {
-    "calls": 213,
-    "input_tokens": 242516,
-    "output_tokens": 36909,
+    "calls": 362,
+    "input_tokens": 327386,
+    "output_tokens": 62810,
     "by_model": {
       "gpt-4.1-mini": [
-        81573,
-        15712
+        109403,
+        20342
       ],
       "gpt-4.1": [
-        160943,
-        21197
+        217983,
+        42468
       ]
     },
-    "cost_usd_estimate": 0.54923
+    "cost_usd_estimate": 0.852018
+  },
+  "cost_by_suite": {
+    "short": {
+      "estimate_usd": 0.182,
+      "analyses": 7
+    },
+    "long": {
+      "estimate_usd": 0.364,
+      "analyses": 1
+    }
   },
   "models": [
     "gpt-4.1-mini",
     "gpt-4.1"
   ],
   "prompt_versions": {
-    "extract": "832f10c026a9",
+    "digest": "a754ee3ce62e",
+    "extract": "7617e169c9b8",
     "match": "0f7a5ce2b7f7",
+    "qa": "69a4ed532ce2",
+    "reconcile": "27bbe128818a",
     "segment": "077ef404bb9a",
-    "segment_merge": "fc4e42d52e6b",
-    "track": "75f74dd235f1",
-    "verify": "00aaed9cc073"
+    "segment_merge": "4f7d3905df64",
+    "track": "35eaed8ca223",
+    "verify": "9c074b7ca61f"
   },
   "run_ids": {
     "TC1": [
-      "20261021-112357-329548_tc1",
-      "20261021-112411-118922_tc1",
-      "20261021-112423-588883_tc1"
+      "20261022-151148-314946_tc1"
     ],
     "TC2": [
-      "20261021-112435-773606_tc2",
-      "20261021-112440-766409_tc2",
-      "20261021-112447-147427_tc2"
+      "20261022-151218-991015_tc2"
     ],
     "TC3": [
-      "20261021-112453-688895_tc3",
-      "20261021-112516-867012_tc3",
-      "20261021-112541-730765_tc3"
+      "20261022-151244-244887_tc3"
     ],
     "TC4": [
-      "20261021-112609-187695_tc4",
-      "20261021-112631-818981_tc4",
-      "20261021-112653-551967_tc4"
+      "20261022-151318-342815_tc4"
     ],
     "TC5": [
-      "20261021-112716-190491_tc5",
-      "20261021-112723-974449_tc5",
-      "20261021-112731-544374_tc5"
+      "20261022-151406-813895_tc5"
     ],
     "TC6": [
-      "20261021-112739-182272_tc6",
-      "20261021-112755-765334_tc6",
-      "20261021-112810-701028_tc6"
+      "20261022-151418-599760_tc6"
     ],
     "TC7": [
-      "20261021-112827-222796_tc7",
-      "20261021-112858-858079_tc7",
-      "20261021-112929-809100_tc7"
+      "20261022-151444-780033_tc7"
+    ],
+    "CASE2": [
+      "20261022-151521-723194_transcript"
     ]
   },
-  "repeat": 3
+  "repeat": 1,
+  "repeat_long": 1,
+  "suite": "quick"
 }
