@@ -1,0 +1,225 @@
+{
+  "_comment": "Lexicon for the code-only signal tagger (signals.py). Phrases are lowercase NFC and matched on word boundaries. An entry is a string, or an object {\"re\": regex, \"display\": text, \"not_after\": [words]}.",
+  "windows": {
+    "reversal_after": 2,
+    "authority_confirm_after": 3,
+    "volunteer_confirm_after": 3
+  },
+  "clause_punctuation": ",.;!?:()…–—",
+  "labels": {
+    "CHOT_RO": "chốt rõ",
+    "CHOT_NGAM": "đồng ý có nội dung",
+    "DONG_Y_NGAN": "đồng ý ngắn",
+    "DUA": "đùa",
+    "NGU_CANH_DUA": "đáp lại câu đùa",
+    "GIA_DINH": "giả định",
+    "PHONG_DOAN": "phỏng đoán",
+    "CAU_HOI": "câu hỏi",
+    "THUAT_LAI": "thuật lại",
+    "DE_XUAT": "đề xuất",
+    "HOAN": "hoãn",
+    "DIEU_KIEN": "điều kiện",
+    "GIAO_VIEC": "giao việc",
+    "MIA_MAI": "mỉa mai",
+    "CHUYEN_Y": "chuyển ý",
+    "TAM_THOI": "chốt tạm",
+    "DAO_NGUOC": "đảo ý",
+    "BO_SUNG_NGUOC": "\"nhưng…\" sau câu chốt",
+    "VO_CHU": "việc chưa có người",
+    "XUNG_PHONG": "xung phong"
+  },
+  "block_labels": {
+    "CHOT_RO": "CHỐT RÕ",
+    "CHOT_NGAM": "ĐỒNG Ý CÓ NỘI DUNG",
+    "DONG_Y_NGAN": "ĐỒNG Ý NGẮN",
+    "DUA": "ĐÙA",
+    "NGU_CANH_DUA": "ĐÁP LẠI CÂU ĐÙA",
+    "GIA_DINH": "GIẢ ĐỊNH",
+    "PHONG_DOAN": "PHỎNG ĐOÁN",
+    "CAU_HOI": "CÂU HỎI",
+    "THUAT_LAI": "THUẬT LẠI",
+    "DE_XUAT": "ĐỀ XUẤT",
+    "HOAN": "HOÃN",
+    "DIEU_KIEN": "ĐIỀU KIỆN",
+    "GIAO_VIEC": "GIAO VIỆC",
+    "MIA_MAI": "MỈA MAI",
+    "CHUYEN_Y": "CHUYỂN Ý",
+    "TAM_THOI": "CHỐT TẠM",
+    "DAO_NGUOC": "ĐẢO Ý",
+    "BO_SUNG_NGUOC": "\"NHƯNG…\" SAU CÂU CHỐT",
+    "VO_CHU": "VIỆC CHƯA CÓ NGƯỜI",
+    "XUNG_PHONG": "XUNG PHONG"
+  },
+  "block_templates": {
+    "NGU_CANH_DUA": "câu trước có \"{phrase}\""
+  },
+  "tags": {
+    "CHOT_RO": {
+      "phrases": [
+        "chốt",
+        "thống nhất",
+        "quyết là",
+        "quyết định là",
+        "quyết luôn",
+        "vậy quyết",
+        "triển khai theo",
+        "làm theo hướng",
+        "làm theo phương án",
+        "vậy thế này",
+        "duyệt rồi",
+        "duyệt luôn",
+        "đã duyệt",
+        {
+          "re": "(?<!\\w)(?:anh|chị|em|tôi|mình) duyệt(?!\\w)",
+          "display": "duyệt",
+          "not_after": ["gửi", "trình", "xin", "chờ", "để", "cần", "phải"]
+        },
+        {
+          "re": "(?<!\\w)(?:anh|chị|em|tôi) đồng ý(?!\\w)",
+          "display": "đồng ý"
+        }
+      ],
+      "suppress_phrases": [
+        "chốt sau",
+        "chốt lại sau",
+        "không duyệt được",
+        "chưa duyệt"
+      ],
+      "negators_before": ["chưa", "không", "đừng", "chẳng", "chả", "khoan"],
+      "negation_window_before": 4,
+      "negation_neutralizers": [
+        "không sao",
+        "không vấn đề",
+        "không có vấn đề",
+        "không ai phản đối",
+        "không ai có ý kiến",
+        "không có ý kiến",
+        "không có gì"
+      ],
+      "negators_after": ["chưa"],
+      "negation_window_after": 3,
+      "sentence_negation_phrases": ["không nghĩ", "chưa nên", "khó mà", "e là"],
+      "rebuttal_words": ["chốt", "thống nhất", "duyệt", "quyết"],
+      "condition_openers": ["nếu"]
+    },
+    "CHOT_NGAM": {
+      "openers": [
+        "ok", "oke", "okay", "được", "ừ", "ừm", "vâng", "dạ được",
+        "vậy", "vậy thì", "thế thì"
+      ],
+      "min_content_words": 4,
+      "filler_words": ["em", "anh", "chị", "nhé", "nha", "ạ", "ha", "thôi", "dạ", "vâng", "ừ", "ừm"],
+      "endings": ["vậy nhé", "thế nhé", "như vậy nhé"]
+    },
+    "DONG_Y_NGAN": {
+      "agree": [
+        "ừ", "ừm", "ok", "oke", "okay", "được", "dạ", "vâng", "vầng", "chuẩn", "đúng", "rồi",
+        "hợp lý", "thế đi", "vậy đi", "làm vậy đi", "làm thế đi", "không sao", "ok luôn", "nhất trí",
+        "cứ thế", "cứ vậy"
+      ],
+      "fillers": ["em", "anh", "chị", "nhé", "nha", "ạ", "ha", "thôi"],
+      "max_words": 5
+    },
+    "DUA": {
+      "phrases": [
+        {"re": "(?<!\\w)ha(?:ha)+(?!\\w)"},
+        {"re": "(?<!\\w)hi(?:hi)+(?!\\w)"},
+        {"re": "(?<!\\w)he(?:he)+(?!\\w)"},
+        {"re": "(?<!\\w)k{3,}(?!\\w)"},
+        ":))",
+        "=))",
+        "đùa",
+        "giỡn",
+        "nói vui",
+        "nói chơi"
+      ],
+      "exceptions": ["không đùa", "không phải đùa", "chẳng đùa", "không giỡn", "không phải giỡn"]
+    },
+    "NGU_CANH_DUA": {"_comment": "computed from the previous utterance; no phrases"},
+    "GIA_DINH": {
+      "phrases": ["hay là", "giả sử", "giả dụ", "nếu mà", "lỡ mà", "thử tưởng tượng"],
+      "hay_lead_particles": ["ừ", "ờ", "à", "thế", "vậy", "thôi", "rồi", "dạ", "ok", "mà"],
+      "hay_not_followed_by": ["quá", "thật", "hơn", "lắm", "ghê", "đấy", "nhỉ", "là", "vậy", "thế"]
+    },
+    "PHONG_DOAN": {
+      "phrases": ["chắc", "chắc là", "có lẽ", "có khi", "em nghĩ có thể"],
+      "exceptions": ["chắc chắn", "cho chắc", "để chắc", "cho chắc chắn"]
+    },
+    "CAU_HOI": {
+      "endings": ["được không", "không ạ", "chưa ạ", "chưa", "chứ", "nhỉ", "phải không", "à"]
+    },
+    "THUAT_LAI": {
+      "phrases": [
+        "hôm trước", "tuần trước", "lần trước", "hồi đó", "như đã bàn", "như tuần trước",
+        "sếp bảo", "bảo là", "nghe nói"
+      ],
+      "name_suffixes": ["bảo"]
+    },
+    "DE_XUAT": {
+      "phrases": ["đề xuất", "em nghĩ", "anh nghĩ", "chị nghĩ", "em thấy", "theo em", "nghiêng về", "muốn"]
+    },
+    "HOAN": {
+      "phrases": [
+        "tính sau", "để sau", "bàn tiếp", "bàn sau", "hỏi lại", "hỏi sếp", "rồi báo", "chờ", "đợi",
+        "cân nhắc thêm", "xem đã", "đã rồi", "chưa chốt", "chưa quyết", "khoan", "vội",
+        "để trong backlog", "để tính", "rồi tính", "hỏi lại sếp"
+      ]
+    },
+    "DIEU_KIEN": {
+      "phrases": [
+        {"re": "(?<!\\w)nếu(?!\\w).+?(?<!\\w)thì(?!\\w)", "display": "nếu … thì"},
+        {"re": "(?<!\\w)khi nào(?!\\w).+?(?<!\\w)thì(?!\\w)", "display": "khi nào … thì"},
+        "trừ khi",
+        "với điều kiện",
+        "miễn là"
+      ]
+    },
+    "GIAO_VIEC": {
+      "phrases": [
+        "em sẽ", "để em", "giao cho", "nhờ", "tự quyết", "tự cân đối", "tự đề xuất", "tự lo",
+        {"re": "(?<!\\w)gửi (?:anh|chị|em|bạn)(?: \\w+)? (?:xem|duyệt)(?!\\w)", "display": "gửi … xem/duyệt"}
+      ],
+      "verbs": [
+        "làm", "lên", "gửi", "viết", "soạn", "chuẩn bị", "liên hệ", "kiểm tra", "xử lý", "dựng",
+        "phụ trách", "lo", "báo", "đặt", "tự"
+      ],
+      "name_window": 2
+    },
+    "MIA_MAI": {
+      "phrases": ["hay quá", "hay thật", "giỏi thật", "tuyệt thật", "lại thêm"]
+    },
+    "CHUYEN_Y": {
+      "phrases": ["chuyển sang", "sang phần", "qua phần", "tiếp theo là"]
+    },
+    "TAM_THOI": {
+      "phrases": [
+        "tạm chốt", "tạm thời", "tạm tính", "làm tạm", "trước mắt", "sơ bộ", "coi như",
+        "cứ thế đã", "thế đã"
+      ]
+    },
+    "DAO_NGUOC": {
+      "phrases": [
+        "khoan", "khoan đã", "đợi đã", "dừng lại", "thôi bỏ", "bỏ đi", "không làm nữa",
+        {"re": "(?<!\\w)không(?:\\s+\\w+){0,3}\\s+nữa(?!\\w)", "display": "không … nữa"},
+        "đổi lại", "sửa lại", "thay vì", "thay bằng", "nghĩ lại", "cân nhắc lại", "à không",
+        "à mà", "nhưng thôi", "rút lại"
+      ],
+      "exceptions": [
+        "không bàn lại nữa", "không bàn nữa", "không cần bàn nữa", "không thay đổi nữa",
+        "không đổi nữa", "không sửa nữa"
+      ]
+    },
+    "BO_SUNG_NGUOC": {
+      "openers": ["nhưng", "tuy nhiên", "có điều", "chỉ có điều"]
+    },
+    "VO_CHU": {
+      "phrases": ["ai đó", "có ai", "người nào", "bạn nào", "ai rảnh", "cần người", "nhờ ai", "tìm người"]
+    },
+    "XUNG_PHONG": {
+      "phrases": [
+        "có thể hỗ trợ", "có thể giúp", "nếu cần", "để em thử", "em xung phong", "em làm được",
+        "em giúp được", "em nhận cũng được", "hay để em"
+      ]
+    }
+  }
+}
