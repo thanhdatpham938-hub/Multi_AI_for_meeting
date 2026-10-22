@@ -225,7 +225,8 @@ def process_topic(
         return TopicResult(items=items, debug=debug, warnings=warnings, failed=True)
 
     warnings = list(warnings)
-    checks = _verify_all(llm, model_strong, items, utterances, warnings)
+    # Agent 4 runs on the light model to cut cost (one call per decision/action).
+    checks = _verify_all(llm, model_light, items, utterances, warnings)
     debug["verify"] = _debug_checks(checks)
     errors = _verify_errors(topic, checks)
     failures = [c for c in checks if c[1] is False]
@@ -246,7 +247,7 @@ def process_topic(
         return TopicResult(items=_finalize(checks, True), debug=debug, warnings=warnings + errors + [warn],
                            failed=True)
     debug["retry_track"] = [i.model_dump(mode="json") for i in retry.items]
-    final, retry_warnings, retry_failed = _merge_retry(llm, model_strong, topic, utterances, checks, retry, debug)
+    final, retry_warnings, retry_failed = _merge_retry(llm, model_light, topic, utterances, checks, retry, debug)
     return TopicResult(items=final, debug=debug, warnings=warnings + retry.warnings + retry_warnings,
                        failed=retry_failed or dropped or retry.dropped_items > 0)
 
